@@ -1,0 +1,8 @@
+
+*.exe
+.vscode
+obj
+
+main
+program
+notes.md
