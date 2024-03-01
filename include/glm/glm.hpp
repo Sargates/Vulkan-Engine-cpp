@@ -100,12 +100,12 @@
 /// at once by including <glm/ext.hpp>. Otherwise, each extension needs to be
 /// included  a specific file.
 ///
+#pragma once
 
 #include "detail/_fixes.hpp"
 
 #include "detail/setup.hpp"
 
-#pragma once
 
 #include <cmath>
 #include <climits>

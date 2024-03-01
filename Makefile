@@ -9,12 +9,15 @@ SRC_DIR := src
 SRC_FILES := $(call rwildcard,$(SRC_DIR)/,*.cpp)
 # Directory to store `.o` files
 OBJ_DIR := obj
-
 # These two lines compile all object files from updated `.cpp` files, I do not understand this
 OBJ_FILES := $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(filter $(SRC_DIR)/%.cpp,$(SRC_FILES))) \
 			 $(patsubst %.cpp,$(OBJ_DIR)/%.o,$(filter-out $(SRC_DIR)/%.cpp,$(SRC_FILES)))
+INCLUDE_DIR := include
+HEADER_FILES := $(call rwildcard,$(INCLUDE_DIR)/,*.hpp)
+
 # Rule for compiling source files
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp $(HEADER_FILES)
+	@echo -n "$@ "
 	@mkdir -p $(@D)
 	@$(CXX) -c $< -o $@ $(CXXFLAGS)
 
@@ -27,12 +30,14 @@ SHADER_FRAG_FILES := $(call rwildcard,$(SHADER_DIR)/,*.frag)
 SHADER_VERT_SPIRV_FILES := $(patsubst $(SHADER_DIR)/%.vert,$(SHADER_OUT_DIR)/%.vert.spv,$(filter $(SHADER_DIR)/%.vert,$(SHADER_VERT_FILES))) \
 			 $(patsubst %.vert,$(SHADER_OUT_DIR)/%.vert.spv,$(filter-out $(SHADER_DIR)/%.vert,$(SHADER_VERT_FILES)))
 $(SHADER_OUT_DIR)/%.vert.spv: $(SHADER_DIR)/%.vert
+	@echo "Compiling Vertex Shaders"
 	@mkdir -p $(@D)
 	@$(GLSLC) -c $< -o $@
 
 SHADER_FRAG_SPIRV_FILES := $(patsubst $(SHADER_DIR)/%.frag,$(SHADER_OUT_DIR)/%.frag.spv,$(filter $(SHADER_DIR)/%.frag,$(SHADER_FRAG_FILES))) \
 			 $(patsubst %.frag,$(SHADER_OUT_DIR)/%.frag.spv,$(filter-out $(SHADER_DIR)/%.frag,$(SHADER_FRAG_FILES)))
 $(SHADER_OUT_DIR)/%.frag.spv: $(SHADER_DIR)/%.frag
+	@echo "Compiling Fragment Shaders"
 	@mkdir -p $(@D)
 	@$(GLSLC) -c $< -o $@
 
@@ -43,6 +48,9 @@ PROGRAM := main
 
 
 program: $(OBJ_FILES)
+	@echo ""
+	@echo "Object Files Compiled!"
+	@echo "Compiling Executable..."
 	$(CXX) $^ -o $(PROGRAM) $(CXXFLAGS)
 
 
@@ -53,9 +61,10 @@ windows:
 	--no-print-directory
 	@echo "Shaders Compiled!"
 
+	@echo -n "Compiling Object Files: "
 	@$(MAKE) program \
 	CXX="x86_64-w64-mingw32-g++" \
-	CXXFLAGS="-I include -L lib/x86_64-w64-mingw32 -lopengl32 -lglfw3dll -lvulkan -std=c++20 -static-libgcc -static-libstdc++" \
+	CXXFLAGS="-I include -L lib/x86_64-w64-mingw32 -lopengl32 -lglfw3dll -lvulkan -std=c++20" \
 	--no-print-directory
 
 linux:
@@ -65,6 +74,7 @@ linux:
 	--no-print-directory
 	@echo "Shaders Compiled!"
 
+	@echo -n "Compiling Object Files: "
 	@$(MAKE) program \
 	CXX="g++" \
 	CXXFLAGS="-I include -L lib/x86_64-linux-gnu -lglfw3 -lvulkan -lGL -std=c++20" \

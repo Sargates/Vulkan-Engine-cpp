@@ -77,13 +77,6 @@ namespace lve {
 		vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
 		vertexInputInfo.pVertexBindingDescriptions = bindingDescriptions.data();
 
-		// See https://www.youtube.com/watch?v=ecMcXW6MSYU&t=268s
-		VkPipelineViewportStateCreateInfo viewportInfo{};
-		viewportInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;				// 
-		viewportInfo.viewportCount = 1;															// 
-		viewportInfo.pViewports = &configInfo.viewport;											// 
-		viewportInfo.scissorCount = 1;												 			// 
-		viewportInfo.pScissors = &configInfo.scissor;											// 
 
 		VkGraphicsPipelineCreateInfo pipelineInfo{};
 		pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -91,12 +84,12 @@ namespace lve {
 		pipelineInfo.pStages = shaderStages;
 		pipelineInfo.pVertexInputState = &vertexInputInfo;
 		pipelineInfo.pInputAssemblyState = &configInfo.inputAssemblyInfo;
-		pipelineInfo.pViewportState = &viewportInfo;
+		pipelineInfo.pViewportState = &configInfo.viewportInfo;
 		pipelineInfo.pRasterizationState = &configInfo.rasterizationInfo;
 		pipelineInfo.pMultisampleState = &configInfo.multisampleInfo;
 		pipelineInfo.pColorBlendState = &configInfo.colorBlendInfo;
-		pipelineInfo.pDepthStencilState = &configInfo.depthSencilInfo;
-		pipelineInfo.pDynamicState = nullptr;
+		pipelineInfo.pDepthStencilState = &configInfo.depthStencilInfo;
+		pipelineInfo.pDynamicState = &configInfo.dynamicStateInfo;
 
 		pipelineInfo.layout = configInfo.pipelineLayout;
 		pipelineInfo.renderPass = configInfo.renderPass;
@@ -121,27 +114,34 @@ namespace lve {
 			throw std::runtime_error("Failed to create shader module");
 
 	}
-	PipelineConfigInfo LvePipeline::defaultPipelineConfigInfo(uint32_t width, uint32_t height) {
-		PipelineConfigInfo configInfo{};
+	void LvePipeline::defaultPipelineConfigInfo(PipelineConfigInfo& configInfo) {
 
 		configInfo.inputAssemblyInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
 		configInfo.inputAssemblyInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 		configInfo.inputAssemblyInfo.primitiveRestartEnable = VK_FALSE;
 
-		// Rectangle formed by (0, 0, width, height) is the rectangle that will be drawn to by Vulkan. 
-		// Setting to the size and position of the screen will have the effect of drawing directly to the screen.
-		// Multiplying `configInfo.viewport.height` by 0.5 will draw everything within the top half of the display, effectively scrunching it
-		configInfo.viewport.x = 0.0f;																		// Viewport Rectangle X coord
-		configInfo.viewport.y = 0.0f;																		// Viewport Rectangle Y coord
-		configInfo.viewport.width = static_cast<float>(width);												// Viewport Rectangle Width
-		configInfo.viewport.height = static_cast<float>(height);											// Viewport Rectangle Height
-		configInfo.viewport.minDepth = 0.0f;																// Viewport Min Depth
-		configInfo.viewport.maxDepth = 1.0f;																// Viewport Max Depth
-		// The min and max depth create a depth-range for the viewport
+		//! Commented code is no longer needed because we're using a dynamic viewport now
+		// // Rectangle formed by (0, 0, width, height) is the rectangle that will be drawn to by Vulkan. 
+		// // Setting to the size and position of the screen will have the effect of drawing directly to the screen.
+		// // Multiplying `configInfo.viewport.height` by 0.5 will draw everything within the top half of the display, effectively scrunching it
+		// configInfo.viewport.x = 0.0f;																		// Viewport Rectangle X coord
+		// configInfo.viewport.y = 0.0f;																		// Viewport Rectangle Y coord
+		// configInfo.viewport.width = static_cast<float>(width);												// Viewport Rectangle Width
+		// configInfo.viewport.height = static_cast<float>(height);											// Viewport Rectangle Height
+		// configInfo.viewport.minDepth = 0.0f;																// Viewport Min Depth
+		// configInfo.viewport.maxDepth = 1.0f;																// Viewport Max Depth
+		// // The min and max depth create a depth-range for the viewport
 
-		// Rectangle formed by (offset.x, offset.y, extent.x, extent.y) is the rectangle that will act as a clipping rect for the viewport. 
-		configInfo.scissor.offset = {0, 0};																	// Scissor Position Offset (position)
-		configInfo.scissor.extent = {width, height};														// Scissor Position Extent (size)
+		// // Rectangle formed by (offset.x, offset.y, extent.x, extent.y) is the rectangle that will act as a clipping rect for the viewport. 
+		// configInfo.scissor.offset = {0, 0};																	// Scissor Position Offset (position)
+		// configInfo.scissor.extent = {width, height};														// Scissor Position Extent (size)
+		
+		configInfo.viewportInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;				// 
+		configInfo.viewportInfo.viewportCount = 1;															// 
+		configInfo.viewportInfo.pViewports = nullptr;											// 
+		configInfo.viewportInfo.scissorCount = 1;												 			// 
+		configInfo.viewportInfo.pScissors = nullptr;											// 
+		
 
 		configInfo.rasterizationInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;	// 
 		configInfo.rasterizationInfo.depthClampEnable = VK_FALSE;											// Disables Depth Clamping -- Allows Z components to be outside of [0, 1]
@@ -182,19 +182,24 @@ namespace lve {
 		configInfo.colorBlendInfo.blendConstants[2] = 0.0f; // Optional
 		configInfo.colorBlendInfo.blendConstants[3] = 0.0f; // Optional
 
-		configInfo.depthSencilInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-		configInfo.depthSencilInfo.depthTestEnable = VK_TRUE;
-		configInfo.depthSencilInfo.depthWriteEnable = VK_TRUE;
-		configInfo.depthSencilInfo.depthCompareOp = VK_COMPARE_OP_LESS;
-		configInfo.depthSencilInfo.depthBoundsTestEnable = VK_FALSE;
-		configInfo.depthSencilInfo.minDepthBounds = 0.0f;	// Optional
-		configInfo.depthSencilInfo.maxDepthBounds = 1.0f;	// Optional
-		configInfo.depthSencilInfo.stencilTestEnable = VK_FALSE	;
-		configInfo.depthSencilInfo.front = {};	// Optional
-		configInfo.depthSencilInfo.back = {};	// Optional
+		configInfo.depthStencilInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+		configInfo.depthStencilInfo.depthTestEnable = VK_TRUE;
+		configInfo.depthStencilInfo.depthWriteEnable = VK_TRUE;
+		configInfo.depthStencilInfo.depthCompareOp = VK_COMPARE_OP_LESS;
+		configInfo.depthStencilInfo.depthBoundsTestEnable = VK_FALSE;
+		configInfo.depthStencilInfo.minDepthBounds = 0.0f;	// Optional
+		configInfo.depthStencilInfo.maxDepthBounds = 1.0f;	// Optional
+		configInfo.depthStencilInfo.stencilTestEnable = VK_FALSE	;
+		configInfo.depthStencilInfo.front = {};	// Optional
+		configInfo.depthStencilInfo.back = {};	// Optional
 
-		return configInfo;
+		configInfo.dynamicStateEnables = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
+		configInfo.dynamicStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+		configInfo.dynamicStateInfo.pDynamicStates = configInfo.dynamicStateEnables.data();
+		configInfo.dynamicStateInfo.dynamicStateCount = static_cast<uint32_t>(configInfo.dynamicStateEnables.size());
+		configInfo.dynamicStateInfo.flags = 0;
 	}
+
 	void LvePipeline::bind(VkCommandBuffer commandBuffer) {
 		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
 	}

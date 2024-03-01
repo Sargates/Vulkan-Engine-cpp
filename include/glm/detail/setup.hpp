@@ -1,3 +1,5 @@
+#pragma once
+
 #ifndef GLM_SETUP_INCLUDED
 
 #include <cassert>
