@@ -22,7 +22,7 @@ struct QueueFamilyIndices {
 	bool isComplete() { return graphicsFamilyHasValue && presentFamilyHasValue; }
 };
 
-class LveDevice {
+class LveDevice { // ? Represents the GPU?
  public:
 #ifdef NDEBUG
 	const bool enableValidationLayers = false;

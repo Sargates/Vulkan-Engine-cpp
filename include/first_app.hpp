@@ -4,6 +4,7 @@
 #include "lve_pipeline.hpp"
 #include "lve_device.hpp"
 #include "lve_swap_chain.hpp"
+#include "lve_model.hpp"
 
 #include <memory>
 #include <vector>
@@ -11,8 +12,8 @@
 namespace lve {
 	class FirstApp {
 		public:
-		static constexpr int WIDTH = 1200;
-		static constexpr int HEIGHT = 675;
+		static constexpr int WIDTH = 900;
+		static constexpr int HEIGHT = 900;
 
 		FirstApp();
 		~FirstApp();
@@ -23,6 +24,7 @@ namespace lve {
 		void run();
 		
 		private:
+			void loadModels();
 			void createPipelineLayout();
 			void createPipeline();
 			void createCommandBuffers();
@@ -34,6 +36,7 @@ namespace lve {
 			std::unique_ptr<LvePipeline> lvePipeline;
 			VkPipelineLayout pipelineLayout;
 			std::vector<VkCommandBuffer> commandBuffers;
+			std::unique_ptr<LveModel> lveModel;
 
 	};
 }

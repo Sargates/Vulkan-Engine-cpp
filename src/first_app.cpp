@@ -3,10 +3,34 @@
 #include <iostream>
 #include <stdexcept>
 #include <array>
+#include <vector>
+#include <cmath>
 
 namespace lve {
 
+	//! Sierpinski's Triangle Generator
+	void sierpinski(
+			std::vector<LveModel::Vertex> &vertices,
+			int depth,
+			glm::vec2 left,
+			glm::vec2 right,
+			glm::vec2 top) {
+		if (depth <= 0) {
+			vertices.push_back({top});
+			vertices.push_back({right});
+			vertices.push_back({left});
+		} else {
+			auto leftTop = 0.5f * (left + top);
+			auto rightTop = 0.5f * (right + top);
+			auto leftRight = 0.5f * (left + right);
+			sierpinski(vertices, depth - 1, left, leftRight, leftTop);
+			sierpinski(vertices, depth - 1, leftRight, right, rightTop);
+			sierpinski(vertices, depth - 1, leftTop, rightTop, top);
+		}
+	}
+
 	FirstApp::FirstApp() {
+		loadModels();
 		createPipelineLayout();
 		createPipeline();
 		createCommandBuffers();
@@ -24,6 +48,20 @@ namespace lve {
 		}
 
 		vkDeviceWaitIdle(lveDevice.device());
+	}
+
+	void FirstApp::loadModels() {
+		// std::vector<LveModel::Vertex> vertices {
+		// 	{{0.0f, -0.5f}},
+		// 	{{0.5f, 0.5f}},
+		// 	{{-0.5f, 0.5f}},
+		// };
+		std::vector<LveModel::Vertex> vertices{};
+		sierpinski(vertices, 7, glm::vec2{-0.9f, 0.9f}, glm::vec2{0.9f, 0.9f}, glm::vec2{0.0f, -0.9f});
+
+		std::cout << "Size: " << vertices.size() << std::endl;
+
+		lveModel = std::make_unique<LveModel>(lveDevice, vertices);
 	}
 
 	void FirstApp::createPipelineLayout() {
@@ -79,13 +117,14 @@ namespace lve {
 
 			std::array<VkClearValue, 2> clearValues{};
 			clearValues[0].color = {0.1f, 0.1f, 0.1f, 1.0f};
-			clearValues[1].depthStencil = {1.0f, 0U}; //! FIX: line in the video is different from mine, I get a comp. error. Episode 5 part 2, ~7:20
+			clearValues[1].depthStencil = {1.0f, 0U};
 			renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
 			renderPassInfo.pClearValues = clearValues.data();
 
 			vkCmdBeginRenderPass(commandBuffers[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 			lvePipeline->bind(commandBuffers[i]);
-			vkCmdDraw(commandBuffers[i], 3, 1, 0, 0);
+			lveModel->bind(commandBuffers[i]);
+			lveModel->draw(commandBuffers[i]);
 
 			vkCmdEndRenderPass(commandBuffers[i]);
 			if (vkEndCommandBuffer(commandBuffers[i]) != VK_SUCCESS)
