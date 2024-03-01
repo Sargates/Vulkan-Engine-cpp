@@ -19,7 +19,7 @@ namespace lve {
 		~FirstApp();
 
 		FirstApp(const FirstApp &) = delete;
-		FirstApp &operator=(const FirstApp &) = delete;
+		FirstApp& operator=(const FirstApp &) = delete;
 
 		void run();
 		

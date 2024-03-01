@@ -23,7 +23,7 @@ struct QueueFamilyIndices {
 };
 
 class LveDevice { // ? Represents the GPU?
- public:
+public:
 #ifdef NDEBUG
 	const bool enableValidationLayers = false;
 #else
@@ -35,9 +35,9 @@ class LveDevice { // ? Represents the GPU?
 
 	// Not copyable or movable
 	LveDevice(const LveDevice &) = delete;
-	void operator=(const LveDevice &) = delete;
+	LveDevice& operator=(const LveDevice &) = delete;
 	LveDevice(LveDevice &&) = delete;
-	LveDevice &operator=(LveDevice &&) = delete;
+	LveDevice& operator=(LveDevice &&) = delete;
 
 	VkCommandPool getCommandPool() { return commandPool; }
 	VkDevice device() { return device_; }
