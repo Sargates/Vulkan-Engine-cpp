@@ -24,19 +24,15 @@ SHADER_DIR := shaders
 SHADER_OUT_DIR := obj
 SHADER_VERT_FILES := $(shell find $(SHADER_DIR) -name '*.vert')
 SHADER_FRAG_FILES := $(shell find $(SHADER_DIR) -name '*.frag')
-
-
 SHADER_VERT_SPIRV_FILES := $(patsubst $(SHADER_DIR)/%.vert,$(SHADER_OUT_DIR)/%.vert.spv,$(SHADER_VERT_FILES))
-$(SHADER_OUT_DIR)/%.vert.spv: $(SHADER_DIR)/%.vert
-	@echo "Compiling Vertex Shaders"
+SHADER_FRAG_SPIRV_FILES := $(patsubst $(SHADER_DIR)/%.frag,$(SHADER_OUT_DIR)/%.frag.spv,$(SHADER_FRAG_FILES))
+
+
+$(SHADER_OUT_DIR)/%.spv: $(SHADER_DIR)/%
+	@echo -n "$@ "
 	@mkdir -p $(@D)
 	@$(GLSLC) -c $< -o $@
 
-SHADER_FRAG_SPIRV_FILES := $(patsubst $(SHADER_DIR)/%.frag,$(SHADER_OUT_DIR)/%.frag.spv,$(SHADER_FRAG_FILES))
-$(SHADER_OUT_DIR)/%.frag.spv: $(SHADER_DIR)/%.frag
-	@echo "Compiling Fragment Shaders"
-	@mkdir -p $(@D)
-	@$(GLSLC) -c $< -o $@
 
 
 # Run `make clean` before changing name of program
@@ -54,6 +50,7 @@ program: $(OBJ_FILES)
 
 windows:
 	@echo "Making game for Windows"
+	@echo -n "Compiling Shaders: "
 	@$(MAKE) shaders \
 	GLSLC="./bin/glslc.exe" \
 	--no-print-directory
@@ -67,6 +64,7 @@ windows:
 
 linux:
 	@echo "Making game for Linux"
+	@echo -n "Compiling Shaders: "
 	@$(MAKE) shaders \
 	GLSLC="./bin/glslc" \
 	--no-print-directory
@@ -79,6 +77,7 @@ linux:
 	@echo ""
 
 shaders: $(SHADER_VERT_SPIRV_FILES) $(SHADER_FRAG_SPIRV_FILES)
+	@echo ""
 	@echo "Shaders Compiled!"
 
 test:
