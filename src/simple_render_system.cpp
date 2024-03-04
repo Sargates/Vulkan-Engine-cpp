@@ -24,8 +24,6 @@ namespace lve {
 		pushConstantRange.offset = 0;
 		pushConstantRange.size = sizeof(SimplePushConstantData);
 
-
-		
 		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
 		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 		pipelineLayoutInfo.setLayoutCount = 0;
@@ -56,11 +54,14 @@ namespace lve {
 		}
 		
 		lvePipeline->bind(commandBuffer);
+
+		auto projectionView = camera.getProjection() * camera.getView();
+		
 		for (auto& obj : gameObjects) {
 
 			SimplePushConstantData push;
 			push.color = obj.color;
-			push.transform = camera.getProjection() * obj.transform.getMatrix();
+			push.transform = projectionView * obj.transform.getMatrix();
 
 			vkCmdPushConstants(
 				commandBuffer,

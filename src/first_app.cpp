@@ -78,15 +78,17 @@ namespace lve {
 	void FirstApp::run() {
 		// std::cout << "maxPushConstantSize = " << lveDevice.properties.limits.maxPushConstantsSize << std::endl;
 		SimpleRenderSystem simpleRenderSystem{lveDevice, lveRenderer.getSwapChainRenderPass()};
-		LveCamera camera{};
 		// glfwSetKeyCallback(lveWindow.getWindow(), keyCallback);
+		LveCamera camera{};
+		// camera.setViewDirection(glm::vec3{0.f}, glm::vec3{.5f, 0.f, 1.f});
+		camera.setViewTarget(glm::vec3{-1.f, -2.f, 2.f}, glm::vec3{0.f, 0.f, 2.5f});
 
 
 		while (! lveWindow.shouldClose()) {
 			glfwPollEvents();
 			float aspectRatio = lveRenderer.getAspectRatio();
 			// camera.setOrthographicProjection(-aspectRatio, aspectRatio, -1, 1, -1, 1);
-			camera.setPerspectiveProjection(glm::radians(72.f), aspectRatio, 0.1, 10.f);
+			camera.setPerspectiveProjection(glm::radians(90.f), aspectRatio, 0.1, 10.f);
 			
 
 			if (auto commandBuffer = lveRenderer.beginFrame()) {
@@ -109,19 +111,11 @@ namespace lve {
 		// std::vector<LveModel::Vertex> vertices{};
 		// sierpinski(vertices, 7, glm::vec2{-0.9f, 0.9f}, glm::vec2{0.9f, 0.9f}, glm::vec2{0.0f, -0.9f});
 
-		glm::vec3 colors[5] = {
-			{1.f, .7f, .73f},
-			{1.f, .87f, .73f},
-			{1.f, 1.f, .73f},
-			{.73f, 1.f, .8f},
-			{.73, .88f, 1.f}
-		};
-
 		std::shared_ptr<LveModel> lveModel = createCubeModel(lveDevice, glm::vec3{0.f});
 
 		LveGameObject cube = LveGameObject::createGameObject();
 		cube.model = lveModel;
-		cube.transform.translation = {.0f, .0f, 1.5f};
+		cube.transform.translation = {.0f, .0f, 2.5f};
 		cube.transform.scale = {.5f, .5f, .5f};
 		gameObjects.push_back(std::move(cube));
 	}
