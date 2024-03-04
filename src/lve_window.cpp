@@ -11,7 +11,6 @@ namespace lve {
 		glfwTerminate();
 	}
 
-	GLFWwindow* LveWindow::getWindow() { return window; }
 
 	void LveWindow::initWindow() {
 		glfwInit();
