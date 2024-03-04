@@ -1,5 +1,8 @@
+# Run `make clean` before changing name of program
+PROGRAM := main
+
 # Primary Directive
-all: windows run
+$(PROGRAM): windows run
 
 # Function that expands to all files recursively
 rwildcard=$(wildcard $1$2) $(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2))
@@ -33,10 +36,13 @@ $(SHADER_OUT_DIR)/%.spv: $(SHADER_DIR)/%
 	@mkdir -p $(@D)
 	@$(GLSLC) -c $< -o $@
 
+# # Recompile dependent cpp files based on updated headers
+# DEPDIR := .deps
+# DEPFLAGS = -MT $@ -MMD -MP -MF $(DEPDIR)/$*.d
+
+# include $(wildcard $(DEPFILES))
 
 
-# Run `make clean` before changing name of program
-PROGRAM := main
 
 
 
