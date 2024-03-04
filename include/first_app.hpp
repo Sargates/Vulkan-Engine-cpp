@@ -23,7 +23,9 @@ namespace lve {
 			FirstApp& operator=(const FirstApp &) = delete;
 
 			void run();
-		
+			// This must be static or doesn't fit the signature of `GLFWkeyfun`
+			static void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
+
 		private:
 			void loadGameObjects();
 

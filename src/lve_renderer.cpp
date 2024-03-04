@@ -93,7 +93,7 @@ namespace lve {
 			throw std::runtime_error("failed to present swap chain iamge");
 		
 		isFrameStarted = false;
-		currentFrameIndex = (currentFrameIndex+1) % LveSwapChain::MAX_FRAMES_IN_FLIGHT;
+		currentFrameIndex = (currentFrameIndex + 1) % LveSwapChain::MAX_FRAMES_IN_FLIGHT;
 	}
 	void LveRenderer::beginSwapChainRenderPass(VkCommandBuffer commandBuffer) {
 		assert(isFrameStarted && "Can't call beginSwapChainRenderPass while frame is not in progress");
