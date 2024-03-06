@@ -8,6 +8,7 @@
 
 
 
+#include <iostream>
 #include <cassert>
 #include <cstring>
 #include <unordered_map>
@@ -17,6 +18,7 @@ namespace std {
 	struct hash<lve::LveModel::Vertex> {
 		size_t operator()(lve::LveModel::Vertex const &vertex) const {
 			size_t seed = 0;
+			lve::hashCombine(seed, vertex.position, vertex.normal, vertex.color, vertex.uv);
 			lve::hashCombine(seed, vertex.position, vertex.normal, vertex.color, vertex.uv);
 			return seed;
 		}
@@ -144,7 +146,8 @@ namespace lve {
 	std::unique_ptr<LveModel> LveModel::createModelFromFile(LveDevice& device, const std::string filePath) {
 		Builder builder{};
 		builder.loadModel(filePath);
-		// std::cout << "Vertex count: " << builder.vertices.size() << std::endl;
+		std::string fileName = filePath.substr(filePath.find_last_of("/") + 1);
+		std::cout << fileName << " Vertex Count: " << builder.vertices.size() << std::endl;
 
 		return std::make_unique<LveModel>(device, builder);
 	}

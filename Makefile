@@ -17,7 +17,7 @@ OBJ_DIR := obj
 # Create string repr of object files from source files
 OBJ_FILES := $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(SRC_FILES))
 # Rule for compiling object files based on changes in the source files
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp $(wildcard include/*.hpp)
 	@echo -n "$@ "
 	@mkdir -p $(@D)
 	@$(CXX) -c $< -o $@ $(CXXFLAGS)

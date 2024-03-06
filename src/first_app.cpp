@@ -58,10 +58,10 @@ namespace lve {
 		for (int i=-dimensions.x/2.0f; i<dimensions.x/2.0f; i++) {
 			for (int j=-dimensions.y/2.0f; j<dimensions.y/2.0f; j++) {
 				glm::vec3 color = ((i+j) % 2 == 0) ? glm::vec3{0.7f, 0.7f, 0.7f} : glm::vec3{0.3f, 0.3f, 0.3f};
-				LveModel::Vertex corner1{{i*size     , 0, j*size     }, color, {0.f, -1.f, 0.f}, {}};
-				LveModel::Vertex corner2{{i*size+size, 0, j*size     }, color, {0.f, -1.f, 0.f}, {}};
-				LveModel::Vertex corner3{{i*size     , 0, j*size+size}, color, {0.f, -1.f, 0.f}, {}};
-				LveModel::Vertex corner4{{i*size+size, 0, j*size+size}, color, {0.f, -1.f, 0.f}, {}};
+				LveModel::Vertex corner1{{i*size     , 0, j*size     }, color, {0.f, 1.f, 0.f}, {}};
+				LveModel::Vertex corner2{{i*size+size, 0, j*size     }, color, {0.f, 1.f, 0.f}, {}};
+				LveModel::Vertex corner3{{i*size     , 0, j*size+size}, color, {0.f, 1.f, 0.f}, {}};
+				LveModel::Vertex corner4{{i*size+size, 0, j*size+size}, color, {0.f, 1.f, 0.f}, {}};
 				modelBuilder.vertices.push_back(corner1);
 				modelBuilder.vertices.push_back(corner2);
 				modelBuilder.vertices.push_back(corner4);
@@ -82,14 +82,38 @@ namespace lve {
 		if (lastMousePos == glm::vec2{-1.0}) // If last pos is not set, just make delta = 0; as if nothing happens
 			lastMousePos = glm::vec2{x, y};
 
-
 		glm::vec2 currentPos{x, y};
 		glm::vec2 delta = (currentPos-lastMousePos) / 900.0f;
-		activeCamera->transform.rotation.x -= delta.y; // Delta-Y maps to rotation about X-axis -- Negative because Vulkan
+		
+		activeCamera->transform.rotation.x += delta.y; // Delta-Y maps to rotation about X-axis -- Negative because Vulkan
 		activeCamera->transform.rotation.y += delta.x; // Delta-X maps to rotation about Y-axis
+
+		float max = 0.01f + glm::half_pi<float>();
+		float min = 0.01f + -glm::half_pi<float>();
+		activeCamera->transform.rotation.x = std::clamp(activeCamera->transform.rotation.x, min, max);
+
+
+
 		activeCamera->UpdateView();
 		lastMousePos = currentPos;
-
+	}
+	// void handleKey(GLFWwindow* window, int key, int scancode, int action, int mods) {
+	// 	if (key == GLFW_KEY_W) { activeCamera->transform.position += activeCamera->transform.forward; }
+	// 	if (key == GLFW_KEY_S) { activeCamera->transform.position += activeCamera->transform.backward; }
+	// 	if (key == GLFW_KEY_A) { activeCamera->transform.position += activeCamera->transform.left; }
+	// 	if (key == GLFW_KEY_D) { activeCamera->transform.position += activeCamera->transform.right; }
+	// 	if (key == GLFW_KEY_SPACE) { activeCamera->transform.position += activeCamera->transform.up; }
+	// 	if (key == GLFW_KEY_LEFT_SHIFT) { activeCamera->transform.position += activeCamera->transform.down; }
+	// 	activeCamera->UpdateView();
+	// }
+	void checkKeys(GLFWwindow* window, float dt) {
+		if (glfwGetKey(window, GLFW_KEY_W))          { activeCamera->transform.position += dt * activeCamera->transform.forward; }
+		if (glfwGetKey(window, GLFW_KEY_S))          { activeCamera->transform.position += dt * activeCamera->transform.backward; }
+		if (glfwGetKey(window, GLFW_KEY_A))          { activeCamera->transform.position += dt * activeCamera->transform.left; }
+		if (glfwGetKey(window, GLFW_KEY_D))          { activeCamera->transform.position += dt * activeCamera->transform.right; }
+		if (glfwGetKey(window, GLFW_KEY_SPACE))      { activeCamera->transform.position += dt * activeCamera->transform.up; }
+		if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT)) { activeCamera->transform.position += dt * activeCamera->transform.down; }
+		activeCamera->UpdateView();
 	}
 
 
@@ -105,12 +129,13 @@ namespace lve {
 		KeyboardMovementController cameraController{};
 		auto viewerObject = LveGameObject::createGameObject();
 		// viewerObject.transform.position = {0, -1.f, -2.5f};
-		camera.setViewTarget({0, -1.f, -2.5f}, {0.f, -1.f, 0.f}, {0.f, 1.f, 0.f});
-		camera.transform.position = {0, -1.f, -2.5f};
+		camera.transform.position = {0, 1.f, -2.5f};
+		// camera.setViewDirection(camera.transform.position, {0.f, -1.f, 0.f}, {0.f, 1.f, 0.f});
+		camera.transform.rotation = glm::zero<glm::vec3>();
 
 		// glfwSetKeyCallback(lveWindow.getWindow(), handleKey);
-		glfwSetInputMode(lveWindow.getWindow(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-		glfwSetCursorPosCallback(lveWindow.getWindow(), mouseCallback);
+		glfwSetInputMode(lveWindow.window(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+		glfwSetCursorPosCallback(lveWindow.window(), mouseCallback);
 		
 		
 		// Clock
@@ -121,14 +146,15 @@ namespace lve {
 			glfwPollEvents();
 
 			auto newTime = std::chrono::high_resolution_clock::now();
-			float frameTime = std::chrono::duration<float, std::chrono::seconds::period>(newTime - currentTime).count();
+			float deltaTime = std::chrono::duration<float, std::chrono::seconds::period>(newTime - currentTime).count();
 			currentTime = newTime;
-			int FPS= (frameTime <= 0.001f) ? 999 : 1/frameTime;
+			int FPS= (deltaTime <= 0.001f) ? 999 : 1/deltaTime;
 			std::cout << FPS << "\r";
 
 
 
-			cameraController.moveInPlaneXZ(lveWindow.getWindow(), frameTime, camera.transform);
+			checkKeys(lveWindow.window(), deltaTime);
+			// cameraController.moveInPlaneXZ(lveWindow.getWindow(), frameTime, camera.transform);
 			camera.UpdateView();
 
 			float aspectRatio = lveRenderer.getAspectRatio();
@@ -141,7 +167,7 @@ namespace lve {
 				lveRenderer.endSwapChainRenderPass(commandBuffer);
 				lveRenderer.endFrame();
 			}
-			if (glfwGetKey(lveWindow.getWindow(), GLFW_KEY_ESCAPE)) { glfwSetWindowShouldClose(lveWindow.getWindow(), GLFW_TRUE); }
+			if (glfwGetKey(lveWindow.window(), GLFW_KEY_ESCAPE)) { glfwSetWindowShouldClose(lveWindow.window(), GLFW_TRUE); }
 		}
 		std::cout << std::endl;
 
@@ -152,22 +178,22 @@ namespace lve {
 		std::shared_ptr<LveModel> lveModel = LveModel::createModelFromFile(lveDevice, "./resources/smooth_vase.obj");
 		LveGameObject gameObject = LveGameObject::createGameObject();
 		gameObject.model = lveModel;
-		gameObject.transform.position = {-1.f, -1.f, 0.f};
+		gameObject.transform.position = {-1.f, 1.f, 0.f};
 		gameObject.transform.scale = glm::vec3{3.f};
 		gameObjects.push_back(std::move(gameObject));
 
 
-		lveModel = LveModel::createModelFromFile(lveDevice, "./resources/smooth_vase.obj");
+		lveModel = LveModel::createModelFromFile(lveDevice, "./resources/colored_cube.obj");
 		LveGameObject cube = LveGameObject::createGameObject();
 		cube.model = lveModel;
-		cube.transform.position = {1.f, -1.f, 0.f};
-		cube.transform.scale = {3.f, 3.f, 3.f};
+		cube.transform.position = {1.f, 1.f, 0.f};
+		cube.transform.scale = glm::vec3{0.5f};
 		gameObjects.push_back(std::move(cube));
 
 		lveModel = createGrid(lveDevice, glm::vec3{0.f}, 0.5, glm::ivec2{16});
 		LveGameObject grid = LveGameObject::createGameObject();
 		grid.model = lveModel;
-		grid.transform.rotation.z = 1.f;
+		grid.transform.rotation.z = -1.f;
 		grid.transform.position.x = -3.f;
 		gameObjects.push_back(std::move(grid));
 	}

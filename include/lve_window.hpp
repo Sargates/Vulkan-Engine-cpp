@@ -15,13 +15,13 @@ namespace lve {
 		LveWindow& operator=(const LveWindow &) = delete;
 
 
-		bool shouldClose() { return glfwWindowShouldClose(window); }
+		bool shouldClose() { return glfwWindowShouldClose(_window); }
 		VkExtent2D getExtent() { return {static_cast<uint32_t>(width), static_cast<uint32_t>(height)}; };
 		bool wasWindowResized() { return frameBufferResized; }
 		void resetWindowResizedFlag() { frameBufferResized = false; }
 
 		void createWindowSurface(VkInstance instance, VkSurfaceKHR* surface);
-		GLFWwindow* getWindow() const { return window; };
+		GLFWwindow* window() const { return _window; };
 
 		private:
 
@@ -31,6 +31,6 @@ namespace lve {
 		bool frameBufferResized = false;
 		std::string windowName;
 	
-		GLFWwindow* window;
+		GLFWwindow* _window;
 	};
 } // namespace lve

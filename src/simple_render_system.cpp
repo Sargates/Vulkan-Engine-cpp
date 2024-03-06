@@ -50,12 +50,10 @@ namespace lve {
 	void SimpleRenderSystem::renderGameObjects(VkCommandBuffer commandBuffer, std::vector<LveGameObject>& gameObjects, const LveCamera& camera) {
 
 		glm::mat4 projectionView = camera.getProjection() * camera.getView();
-		
+
 		lvePipeline->bind(commandBuffer);
 		for (auto& obj : gameObjects) {
 
-			
-			
 			SimplePushConstantData push;
 			auto modelMatrix = obj.transform.getLocalToWorldMatrix(); // might be wrong
 			push.transform = projectionView * modelMatrix;

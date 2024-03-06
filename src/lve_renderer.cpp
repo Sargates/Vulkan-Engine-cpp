@@ -117,9 +117,9 @@ namespace lve {
 
 		VkViewport viewport{};
 		viewport.x = 0.0f;
-		viewport.y = 0.0f;
+		viewport.y = static_cast<float>(lveSwapChain->getSwapChainExtent().height);
 		viewport.width = static_cast<float>(lveSwapChain->getSwapChainExtent().width);
-		viewport.height = static_cast<float>(lveSwapChain->getSwapChainExtent().height);
+		viewport.height = -static_cast<float>(lveSwapChain->getSwapChainExtent().height);
 		viewport.minDepth = 0.0f;
 		viewport.maxDepth = 1.0f;
 		VkRect2D scissor{{0, 0}, lveSwapChain->getSwapChainExtent()};

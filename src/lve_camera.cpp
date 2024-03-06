@@ -26,55 +26,24 @@ namespace lve {
 		projectionMatrix[3][2] = -(far*near) / (far - near);
 	}
 
-	void LveCamera::setViewDirection(glm::vec3 position, glm::vec3 direction, glm::vec3 up) {
-		assert(direction != glm::vec3{0.f} && "Cannot set view direction with zero vector");
-		
-		const glm::vec3 w{glm::normalize(direction)};
-		const glm::vec3 u{glm::normalize(glm::cross(w, up))};
-		const glm::vec3 v{glm::cross(w, u)}; // TODO: See if this order should be flipped. I think `v` is negated from what it should be
-
-		viewMatrix = glm::mat4{1.f};
-		viewMatrix[0][0] = u.x;
-		viewMatrix[1][0] = u.y;
-		viewMatrix[2][0] = u.z;
-		viewMatrix[0][1] = v.x;
-		viewMatrix[1][1] = v.y;
-		viewMatrix[2][1] = v.z;
-		viewMatrix[0][2] = w.x;
-		viewMatrix[1][2] = w.y;
-		viewMatrix[2][2] = w.z;
-		viewMatrix[3][0] = -glm::dot(u, position);
-		viewMatrix[3][1] = -glm::dot(v, position);
-		viewMatrix[3][2] = -glm::dot(w, position);
-	}
-
-	void LveCamera::setViewTarget(glm::vec3 position, glm::vec3 target, glm::vec3 up) {
-		setViewDirection(position, target - position, up);
-	}
-
 	void LveCamera::UpdateView() {
-		const float c3 = glm::cos(transform.rotation.z);
-		const float s3 = glm::sin(transform.rotation.z);
-		const float c2 = glm::cos(transform.rotation.x);
-		const float s2 = glm::sin(transform.rotation.x);
-		const float c1 = glm::cos(transform.rotation.y);
-		const float s1 = glm::sin(transform.rotation.y);
-		const glm::vec3 u{(c1 * c3 + s1 * s2 * s3), (c2 * s3), (c1 * s2 * s3 - c3 * s1)};
-		const glm::vec3 v{(c3 * s1 * s2 - c1 * s3), (c2 * c3), (c1 * c3 * s2 + s1 * s3)};
-		const glm::vec3 w{(c2 * s1), (-s2), (c1 * c2)};
+		transform.recalculateBasisDirs();
+		
 		viewMatrix = glm::mat4{1.f};
-		viewMatrix[0][0] = u.x;
-		viewMatrix[1][0] = u.y;
-		viewMatrix[2][0] = u.z;
-		viewMatrix[0][1] = v.x;
-		viewMatrix[1][1] = v.y;
-		viewMatrix[2][1] = v.z;
-		viewMatrix[0][2] = w.x;
-		viewMatrix[1][2] = w.y;
-		viewMatrix[2][2] = w.z;
-		viewMatrix[3][0] = -glm::dot(u, transform.position);
-		viewMatrix[3][1] = -glm::dot(v, transform.position);
-		viewMatrix[3][2] = -glm::dot(w, transform.position);
+		viewMatrix[0][0] = transform.right.x;
+		viewMatrix[1][0] = transform.right.y;
+		viewMatrix[2][0] = transform.right.z;
+		viewMatrix[0][1] = transform.up.x;
+		viewMatrix[1][1] = transform.up.y;
+		viewMatrix[2][1] = transform.up.z;
+		viewMatrix[0][2] = transform.forward.x;
+		viewMatrix[1][2] = transform.forward.y;
+		viewMatrix[2][2] = transform.forward.z;
+		viewMatrix[3][0] = -glm::dot(transform.right, transform.position);
+		viewMatrix[3][1] = -glm::dot(transform.up, transform.position);
+		viewMatrix[3][2] = -glm::dot(transform.forward, transform.position);
+
+		// viewMatrix = glm::scale(viewMatrix, transform.scale); // Scaling
 	}
 
 }

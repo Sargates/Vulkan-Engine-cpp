@@ -14,8 +14,6 @@ namespace lve {
 		void setOrthographicProjection(float left, float right, float top, float bottom, float near, float far);
 		void setPerspectiveProjection(float fovy, float aspect, float near, float far);
 
-		void setViewDirection(glm::vec3 position, glm::vec3 direction, glm::vec3 up = glm::vec3{0, -1, 0});
-		void setViewTarget(glm::vec3 position, glm::vec3 direction, glm::vec3 up = glm::vec3{0, -1, 0});
 		void UpdateView();
 
 		const glm::mat4& getProjection() const { return projectionMatrix; }
