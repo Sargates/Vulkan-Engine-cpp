@@ -52,13 +52,13 @@ namespace lve {
 		setViewDirection(position, target - position, up);
 	}
 
-	void LveCamera::setViewYXZ(glm::vec3 position, glm::vec3 rotation) {
-		const float c3 = glm::cos(rotation.z);
-		const float s3 = glm::sin(rotation.z);
-		const float c2 = glm::cos(rotation.x);
-		const float s2 = glm::sin(rotation.x);
-		const float c1 = glm::cos(rotation.y);
-		const float s1 = glm::sin(rotation.y);
+	void LveCamera::UpdateView() {
+		const float c3 = glm::cos(transform.rotation.z);
+		const float s3 = glm::sin(transform.rotation.z);
+		const float c2 = glm::cos(transform.rotation.x);
+		const float s2 = glm::sin(transform.rotation.x);
+		const float c1 = glm::cos(transform.rotation.y);
+		const float s1 = glm::sin(transform.rotation.y);
 		const glm::vec3 u{(c1 * c3 + s1 * s2 * s3), (c2 * s3), (c1 * s2 * s3 - c3 * s1)};
 		const glm::vec3 v{(c3 * s1 * s2 - c1 * s3), (c2 * c3), (c1 * c3 * s2 + s1 * s3)};
 		const glm::vec3 w{(c2 * s1), (-s2), (c1 * c2)};
@@ -72,9 +72,9 @@ namespace lve {
 		viewMatrix[0][2] = w.x;
 		viewMatrix[1][2] = w.y;
 		viewMatrix[2][2] = w.z;
-		viewMatrix[3][0] = -glm::dot(u, position);
-		viewMatrix[3][1] = -glm::dot(v, position);
-		viewMatrix[3][2] = -glm::dot(w, position);
+		viewMatrix[3][0] = -glm::dot(u, transform.position);
+		viewMatrix[3][1] = -glm::dot(v, transform.position);
+		viewMatrix[3][2] = -glm::dot(w, transform.position);
 	}
 
 }

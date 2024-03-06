@@ -6,6 +6,7 @@
 #include "lve_model.hpp"
 #include "lve_renderer.hpp"
 #include "lve_game_object.hpp"
+#include "lve_camera.hpp"
 
 #include <memory>
 #include <vector>
@@ -24,7 +25,9 @@ namespace lve {
 
 			void run();
 			// This must be static or doesn't fit the signature of `GLFWkeyfun`
-			static void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
+			void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
+			void mousePosCallback(GLFWwindow* window, double x, double y);
+
 
 		private:
 			void loadGameObjects();

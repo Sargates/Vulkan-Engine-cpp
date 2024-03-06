@@ -3,7 +3,7 @@
 #include "lve_camera.hpp"
 #include "simple_render_system.hpp"
 #include "keyboard_movement_controller.hpp"
-
+#include "math.hpp"
 
 #include <iostream>
 #include <stdexcept>
@@ -11,6 +11,11 @@
 #include <chrono>
 #include <vector>
 
+#define print(x) std::cout << x << std::endl
+
+glm::vec2 lastMousePos{-1.0};
+
+lve::LveCamera* activeCamera = nullptr;
 
 namespace lve {
 	
@@ -20,72 +25,134 @@ namespace lve {
 	FirstApp::~FirstApp() {}
 
 	std::unique_ptr<LveModel> createCubeModel(LveDevice& device, glm::vec3 offset) {
-		std::vector<LveModel::Vertex> vertices{
+		LveModel::Builder modelBuilder{};
+		// modelBuilder.vertices = {
+		// 	// left face (white)
+		// 	{{-.5f, .5f, .5f}, {.9f, .9f, .9f}},
+		// 	{{-.5f, -.5f, -.5f}, {.9f, .9f, .9f}},
+		// 	{{-.5f, -.5f, .5f}, {.9f, .9f, .9f}},
+		// 	{{-.5f, .5f, -.5f}, {.9f, .9f, .9f}},
 		
-			// left face (white)
-			{{-.5f, -.5f, -.5f}, {.9f, .9f, .9f}},
-			{{-.5f, .5f, .5f}, {.9f, .9f, .9f}},
-			{{-.5f, -.5f, .5f}, {.9f, .9f, .9f}},
-			{{-.5f, -.5f, -.5f}, {.9f, .9f, .9f}},
-			{{-.5f, .5f, -.5f}, {.9f, .9f, .9f}},
-			{{-.5f, .5f, .5f}, {.9f, .9f, .9f}},
+		// 	// right face (yellow)
+		// 	{{.5f, -.5f, -.5f}, {.8f, .8f, .1f}},
+		// 	{{.5f, .5f, .5f}, {.8f, .8f, .1f}},
+		// 	{{.5f, -.5f, .5f}, {.8f, .8f, .1f}},
+		// 	{{.5f, .5f, -.5f}, {.8f, .8f, .1f}},
 		
-			// right face (yellow)
-			{{.5f, -.5f, -.5f}, {.8f, .8f, .1f}},
-			{{.5f, .5f, .5f}, {.8f, .8f, .1f}},
-			{{.5f, -.5f, .5f}, {.8f, .8f, .1f}},
-			{{.5f, -.5f, -.5f}, {.8f, .8f, .1f}},
-			{{.5f, .5f, -.5f}, {.8f, .8f, .1f}},
-			{{.5f, .5f, .5f}, {.8f, .8f, .1f}},
+		// 	// top face (orange, remember y axis points down)
+		// 	{{-.5f, -.5f, -.5f}, {.9f, .6f, .1f}},
+		// 	{{.5f, -.5f, .5f}, {.9f, .6f, .1f}},
+		// 	{{-.5f, -.5f, .5f}, {.9f, .6f, .1f}},
+		// 	{{.5f, -.5f, -.5f}, {.9f, .6f, .1f}},
 		
-			// top face (orange, remember y axis points down)
-			{{-.5f, -.5f, -.5f}, {.9f, .6f, .1f}},
-			{{.5f, -.5f, .5f}, {.9f, .6f, .1f}},
-			{{-.5f, -.5f, .5f}, {.9f, .6f, .1f}},
-			{{-.5f, -.5f, -.5f}, {.9f, .6f, .1f}},
-			{{.5f, -.5f, -.5f}, {.9f, .6f, .1f}},
-			{{.5f, -.5f, .5f}, {.9f, .6f, .1f}},
+		// 	// bottom face (red)
+		// 	{{.5f, .5f, .5f}, {.8f, .1f, .1f}},
+		// 	{{-.5f, .5f, -.5f}, {.8f, .1f, .1f}},
+		// 	{{-.5f, .5f, .5f}, {.8f, .1f, .1f}},
+		// 	{{.5f, .5f, -.5f}, {.8f, .1f, .1f}},
 		
-			// bottom face (red)
-			{{-.5f, .5f, -.5f}, {.8f, .1f, .1f}},
-			{{.5f, .5f, .5f}, {.8f, .1f, .1f}},
-			{{-.5f, .5f, .5f}, {.8f, .1f, .1f}},
-			{{-.5f, .5f, -.5f}, {.8f, .1f, .1f}},
-			{{.5f, .5f, -.5f}, {.8f, .1f, .1f}},
-			{{.5f, .5f, .5f}, {.8f, .1f, .1f}},
+		// 	// nose face (blue)
+		// 	{{-.5f, -.5f, 0.5f}, {.1f, .1f, .8f}},
+		// 	{{.5f, .5f, 0.5f}, {.1f, .1f, .8f}},
+		// 	{{-.5f, .5f, 0.5f}, {.1f, .1f, .8f}},
+		// 	{{.5f, -.5f, 0.5f}, {.1f, .1f, .8f}},
 		
-			// nose face (blue)
-			{{-.5f, -.5f, 0.5f}, {.1f, .1f, .8f}},
-			{{.5f, .5f, 0.5f}, {.1f, .1f, .8f}},
-			{{-.5f, .5f, 0.5f}, {.1f, .1f, .8f}},
-			{{-.5f, -.5f, 0.5f}, {.1f, .1f, .8f}},
-			{{.5f, -.5f, 0.5f}, {.1f, .1f, .8f}},
-			{{.5f, .5f, 0.5f}, {.1f, .1f, .8f}},
-		
-			// tail face (green)
-			{{-.5f, -.5f, -0.5f}, {.1f, .8f, .1f}},
-			{{.5f, .5f, -0.5f}, {.1f, .8f, .1f}},
-			{{-.5f, .5f, -0.5f}, {.1f, .8f, .1f}},
-			{{-.5f, -.5f, -0.5f}, {.1f, .8f, .1f}},
-			{{.5f, -.5f, -0.5f}, {.1f, .8f, .1f}},
-			{{.5f, .5f, -0.5f}, {.1f, .8f, .1f}},
-		
+		// 	// tail face (green)
+		// 	{{.5f, .5f, -0.5f}, {.1f, .8f, .1f}},
+		// 	{{-.5f, -.5f, -0.5f}, {.1f, .8f, .1f}},
+		// 	{{-.5f, .5f, -0.5f}, {.1f, .8f, .1f}},
+		// 	{{.5f, -.5f, -0.5f}, {.1f, .8f, .1f}},
+		// };
+		// modelBuilder.indices = {0,  1,  2,  0,  3,  1,  4,  5,  6,  4,  7,  5,  8,  9,  10, 8,  11, 9,
+		//						   11, 13, 14, 12, 15, 13, 16, 17, 18, 16, 19, 17, 20, 21, 22, 20, 23, 21};
+		modelBuilder.vertices = {
+			{{0.f, 0.f, 0.f}, {0.f, 0.f, 0.f}}, // Black	- 0
+			{{0.f, 0.f, 1.f}, {0.f, 0.f, 1.f}}, // Blue		- 1
+			{{0.f, 1.f, 0.f}, {0.f, 1.f, 0.f}}, // Green	- 2
+			{{0.f, 1.f, 1.f}, {0.f, 1.f, 1.f}}, // Cyan		- 3
+			{{1.f, 0.f, 0.f}, {1.f, 0.f, 0.f}}, // Red		- 4
+			{{1.f, 0.f, 1.f}, {1.f, 0.f, 1.f}}, // Magenta	- 5
+			{{1.f, 1.f, 0.f}, {1.f, 1.f, 0.f}}, // Yellow	- 6
+			{{1.f, 1.f, 1.f}, {1.f, 1.f, 1.f}}  // White	- 7
 		};
-		for (auto& v : vertices) {
+
+		modelBuilder.indices = {
+			0, 2, 4,   4, 2, 6,	// Front
+			4, 6, 5,   5, 6, 7,	// Right
+			5, 7, 1,   1, 7, 3,	// Back
+			1, 3, 2,   1, 2, 0,	// Left
+			1, 0, 5,   0, 4, 5,	// Top
+			2, 3, 7,   2, 7, 6	// Bottom
+		};
+
+		for (auto& v : modelBuilder.vertices) {
 			v.position += offset;
 		}
-		return std::make_unique<LveModel>(device, vertices);
+		return std::make_unique<LveModel>(device, modelBuilder);
 	}
 
+	std::unique_ptr<LveModel> createGrid(LveDevice& device, glm::vec3 offset, float size, glm::ivec2 dimensions) {
+		LveModel::Builder modelBuilder{};
+
+		for (int i=-dimensions.x/2.0f; i<dimensions.x/2.0f; i++) {
+			for (int j=-dimensions.y/2.0f; j<dimensions.y/2.0f; j++) {
+				glm::vec3 color = ((i+j) % 2 == 0) ? glm::vec3{0.7f, 0.7f, 0.7f} : glm::vec3{0.3f, 0.3f, 0.3f};
+				LveModel::Vertex corner1{{i*size     , 0, j*size     }, color};
+				LveModel::Vertex corner2{{i*size+size, 0, j*size     }, color};
+				LveModel::Vertex corner3{{i*size     , 0, j*size+size}, color};
+				LveModel::Vertex corner4{{i*size+size, 0, j*size+size}, color};
+				modelBuilder.vertices.push_back(corner1);
+				modelBuilder.vertices.push_back(corner2);
+				modelBuilder.vertices.push_back(corner4);
+				modelBuilder.vertices.push_back(corner1);
+				modelBuilder.vertices.push_back(corner4);
+				modelBuilder.vertices.push_back(corner3);
+			}
+		}
+		for (auto& v : modelBuilder.vertices) {
+			v.position += offset;
+		}
+		return std::make_unique<LveModel>(device, modelBuilder);
+	}
+
+	void mouseCallback(GLFWwindow* window, double xd, double yd) {
+		float x = static_cast<float>(xd); float y = static_cast<float>(yd);
+		
+		if (lastMousePos == glm::vec2{-1.0}) // If last pos is not set, just make delta = 0; as if nothing happens
+			lastMousePos = glm::vec2{x, y};
+
+
+		glm::vec2 currentPos{x, y};
+		glm::vec2 delta = (currentPos-lastMousePos) / 900.0f;
+		activeCamera->transform.rotation.x -= delta.y; // Delta-Y maps to rotation about X-axis -- Negative because Vulkan
+		activeCamera->transform.rotation.y += delta.x; // Delta-X maps to rotation about Y-axis
+		activeCamera->UpdateView();
+		lastMousePos = currentPos;
+
+	}
+
+
 	void FirstApp::run() {
+
+		//! This fucking solution of needing to have a pointer you need to cast and dereference is the stupidest thing ever. Fair enough because C++ doesn't have (adequate) reflection.
+		// glfwSetWindowUserPointer(lveWindow.getWindow(), this);
 		SimpleRenderSystem simpleRenderSystem{lveDevice, lveRenderer.getSwapChainRenderPass()};
-		// glfwSetKeyCallback(lveWindow.getWindow(), keyCallback);
+
+		// Cameras
 		LveCamera camera{};
-		camera.setViewTarget(glm::vec3{-1.f, -2.f, 2.f}, glm::vec3{0.f, 0.f, 2.5f});
-
-		auto viewerObject = LveGameObject::createGameObject();
+		activeCamera = &camera; // Set `activeCamera` to this local camera
 		KeyboardMovementController cameraController{};
+		auto viewerObject = LveGameObject::createGameObject();
+		// viewerObject.transform.position = {0, -1.f, -2.5f};
+		camera.setViewTarget({0, -1.f, -2.5f}, {0.f, -1.f, 0.f}, {0.f, 1.f, 0.f});
+		camera.transform.position = {0, -1.f, -2.5f};
 
+		// glfwSetKeyCallback(lveWindow.getWindow(), handleKey);
+		glfwSetInputMode(lveWindow.getWindow(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+		glfwSetCursorPosCallback(lveWindow.getWindow(), mouseCallback);
+		
+		
+		// Clock
 		auto currentTime = std::chrono::high_resolution_clock::now();
 
 
@@ -96,9 +163,10 @@ namespace lve {
 			float frameTime = std::chrono::duration<float, std::chrono::seconds::period>(newTime - currentTime).count();
 			currentTime = newTime;
 
-			cameraController.moveInPlaneXZ(lveWindow.getWindow(), frameTime, viewerObject);
-			camera.setViewYXZ(viewerObject.transform.translation, viewerObject.transform.rotation);
 
+
+			cameraController.moveInPlaneXZ(lveWindow.getWindow(), frameTime, camera.transform);
+			camera.UpdateView();
 
 			float aspectRatio = lveRenderer.getAspectRatio();
 			camera.setPerspectiveProjection(glm::radians(90.f), aspectRatio, 0.1, 10.f);
@@ -111,26 +179,24 @@ namespace lve {
 				lveRenderer.endFrame();
 			}
 			if (glfwGetKey(lveWindow.getWindow(), GLFW_KEY_ESCAPE)) { glfwSetWindowShouldClose(lveWindow.getWindow(), GLFW_TRUE); }
-			// if (glfwGetKey(lveWindow.getWindow(), GLFW_KEY_W)) { gameObjects[0].transform2D.rotation += 0.01; }
-			// if (glfwGetKey(lveWindow.getWindow(), GLFW_KEY_A)) { gameObjects[0].transform2D.scale.x += 0.005f; }
-			// if (glfwGetKey(lveWindow.getWindow(), GLFW_KEY_S)) { gameObjects[0].transform2D.rotation -= 0.01; }
-			// if (glfwGetKey(lveWindow.getWindow(), GLFW_KEY_D)) { gameObjects[0].transform2D.scale.x -= 0.005f; }
 		}
 
 		vkDeviceWaitIdle(lveDevice.device());
 	}
 	void FirstApp::loadGameObjects() {
-
-		// std::vector<LveModel::Vertex> vertices{};
-		// sierpinski(vertices, 7, glm::vec2{-0.9f, 0.9f}, glm::vec2{0.9f, 0.9f}, glm::vec2{0.0f, -0.9f});
-
-		std::shared_ptr<LveModel> lveModel = createCubeModel(lveDevice, glm::vec3{0.f});
+		std::shared_ptr<LveModel> lveModel = createCubeModel(lveDevice, glm::vec3{-0.5f});
 
 		LveGameObject cube = LveGameObject::createGameObject();
 		cube.model = lveModel;
-		cube.transform.translation = {.0f, .0f, 2.5f};
+		cube.transform.position = {0.f, -1.f, 0.f};
 		cube.transform.scale = {.5f, .5f, .5f};
 		gameObjects.push_back(std::move(cube));
+
+		lveModel = createGrid(lveDevice, glm::vec3{0.f}, 0.5f, {16, 16});
+
+		LveGameObject grid = LveGameObject::createGameObject();
+		grid.model = lveModel;
+		gameObjects.push_back(std::move(grid));
 	}
 	
 }

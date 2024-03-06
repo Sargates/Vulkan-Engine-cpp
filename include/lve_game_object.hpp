@@ -1,8 +1,8 @@
 #pragma once
 
 #include "lve_model.hpp"
+#include "transform.hpp"
 
-#include "glm/gtc/matrix_transform.hpp"
 
 
 #include <memory>
@@ -52,7 +52,7 @@ namespace lve {
 
 			std::shared_ptr<LveModel> model{};
 			glm::vec3 color{};
-			TransformComponent transform{};
+			Transform transform{};
 
 		private:
 			id_t id;

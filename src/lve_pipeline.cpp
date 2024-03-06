@@ -138,9 +138,9 @@ namespace lve {
 		
 		configInfo.viewportInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;				// 
 		configInfo.viewportInfo.viewportCount = 1;															// 
-		configInfo.viewportInfo.pViewports = nullptr;											// 
+		configInfo.viewportInfo.pViewports = nullptr;														// 
 		configInfo.viewportInfo.scissorCount = 1;												 			// 
-		configInfo.viewportInfo.pScissors = nullptr;											// 
+		configInfo.viewportInfo.pScissors = nullptr;														// 
 		
 
 		configInfo.rasterizationInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;	// 
@@ -148,7 +148,7 @@ namespace lve {
 		configInfo.rasterizationInfo.rasterizerDiscardEnable = VK_FALSE;									// 
 		configInfo.rasterizationInfo.polygonMode = VK_POLYGON_MODE_FILL;									// 
 		configInfo.rasterizationInfo.lineWidth = 1.0f;														// 
-		configInfo.rasterizationInfo.cullMode = VK_CULL_MODE_NONE;											// Disable backface culling
+		configInfo.rasterizationInfo.cullMode = VK_CULL_MODE_FRONT_BIT;											// Disable backface culling
 		configInfo.rasterizationInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;									// Winding order of Triangles
 		configInfo.rasterizationInfo.depthBiasEnable = VK_FALSE;											// 
 		configInfo.rasterizationInfo.depthBiasConstantFactor = 0.0f;	// Optional							// 
