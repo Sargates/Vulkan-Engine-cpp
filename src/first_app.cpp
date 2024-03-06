@@ -58,10 +58,10 @@ namespace lve {
 		for (int i=-dimensions.x/2.0f; i<dimensions.x/2.0f; i++) {
 			for (int j=-dimensions.y/2.0f; j<dimensions.y/2.0f; j++) {
 				glm::vec3 color = ((i+j) % 2 == 0) ? glm::vec3{0.7f, 0.7f, 0.7f} : glm::vec3{0.3f, 0.3f, 0.3f};
-				LveModel::Vertex corner1{{i*size     , 0, j*size     }, color};
-				LveModel::Vertex corner2{{i*size+size, 0, j*size     }, color};
-				LveModel::Vertex corner3{{i*size     , 0, j*size+size}, color};
-				LveModel::Vertex corner4{{i*size+size, 0, j*size+size}, color};
+				LveModel::Vertex corner1{{i*size     , 0, j*size     }, color, {0.f, -1.f, 0.f}, {}};
+				LveModel::Vertex corner2{{i*size+size, 0, j*size     }, color, {0.f, -1.f, 0.f}, {}};
+				LveModel::Vertex corner3{{i*size     , 0, j*size+size}, color, {0.f, -1.f, 0.f}, {}};
+				LveModel::Vertex corner4{{i*size+size, 0, j*size+size}, color, {0.f, -1.f, 0.f}, {}};
 				modelBuilder.vertices.push_back(corner1);
 				modelBuilder.vertices.push_back(corner2);
 				modelBuilder.vertices.push_back(corner4);
@@ -123,6 +123,8 @@ namespace lve {
 			auto newTime = std::chrono::high_resolution_clock::now();
 			float frameTime = std::chrono::duration<float, std::chrono::seconds::period>(newTime - currentTime).count();
 			currentTime = newTime;
+			int FPS= (frameTime <= 0.001f) ? 999 : 1/frameTime;
+			std::cout << FPS << "\r";
 
 
 
@@ -130,7 +132,7 @@ namespace lve {
 			camera.UpdateView();
 
 			float aspectRatio = lveRenderer.getAspectRatio();
-			camera.setPerspectiveProjection(glm::radians(90.f), aspectRatio, 0.1, 10.f);
+			camera.setPerspectiveProjection(glm::radians(90.f), aspectRatio, 0.1, 100.f);
 			
 
 			if (auto commandBuffer = lveRenderer.beginFrame()) {
@@ -141,6 +143,7 @@ namespace lve {
 			}
 			if (glfwGetKey(lveWindow.getWindow(), GLFW_KEY_ESCAPE)) { glfwSetWindowShouldClose(lveWindow.getWindow(), GLFW_TRUE); }
 		}
+		std::cout << std::endl;
 
 		vkDeviceWaitIdle(lveDevice.device());
 	}
@@ -149,15 +152,23 @@ namespace lve {
 		std::shared_ptr<LveModel> lveModel = LveModel::createModelFromFile(lveDevice, "./resources/smooth_vase.obj");
 		LveGameObject gameObject = LveGameObject::createGameObject();
 		gameObject.model = lveModel;
-		gameObject.transform.position = {0.f, -1.f, 0.f};
+		gameObject.transform.position = {-1.f, -1.f, 0.f};
 		gameObject.transform.scale = glm::vec3{3.f};
 		gameObjects.push_back(std::move(gameObject));
 
 
-		lveModel = createCubeModel(lveDevice, glm::vec3{0.f});
+		lveModel = LveModel::createModelFromFile(lveDevice, "./resources/smooth_vase.obj");
 		LveGameObject cube = LveGameObject::createGameObject();
 		cube.model = lveModel;
+		cube.transform.position = {1.f, -1.f, 0.f};
+		cube.transform.scale = {3.f, 3.f, 3.f};
 		gameObjects.push_back(std::move(cube));
+
+		lveModel = createGrid(lveDevice, glm::vec3{0.f}, 0.5, glm::ivec2{16});
+		LveGameObject grid = LveGameObject::createGameObject();
+		grid.model = lveModel;
+		grid.transform.rotation.z = 1.f;
+		grid.transform.position.x = -3.f;
+		gameObjects.push_back(std::move(grid));
 	}
-	
 }

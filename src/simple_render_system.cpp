@@ -8,8 +8,8 @@ namespace lve {
 
 
 	struct SimplePushConstantData {
-		glm::mat4 transform{1.0f};
-		alignas(16) glm::vec3 color;
+		glm::mat4 transform{1.f};
+		glm::mat4 normalMatrix{1.f};
 	};
 
 	SimpleRenderSystem::SimpleRenderSystem(LveDevice& device, VkRenderPass renderPass) : lveDevice{device} {
@@ -57,8 +57,9 @@ namespace lve {
 			
 			
 			SimplePushConstantData push;
-			push.color = obj.color;
-			push.transform = projectionView * obj.transform.getLocalToWorldMatrix();
+			auto modelMatrix = obj.transform.getLocalToWorldMatrix(); // might be wrong
+			push.transform = projectionView * modelMatrix;
+			push.normalMatrix = obj.transform.getNormalMatrix();
 
 			vkCmdPushConstants(
 				commandBuffer,
