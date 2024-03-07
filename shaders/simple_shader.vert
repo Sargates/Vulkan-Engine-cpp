@@ -15,16 +15,11 @@ layout (push_constant) uniform Push {
 
 
 const vec3 DIRECTION_TO_LIGHT = normalize(vec3(1.0, 3.0, -1.0));
-const float AMBIENT_LIGHT_LEVEL = 0.01;
+const float AMBIENT_LIGHT_LEVEL = .8;
 
 
 void main() {
 	gl_Position = push.transform * vec4(position, 1.f);
-
-	// vec3 normalInWorldSpace = normalize(mat3(push.modelMatrix) * normal);
-
-	// mat3 normalMatrix = transpose(inverse(mat3(push.modelMatrix)));
-	// vec3 normalInWorldSpace = normalize(normalMatrix * normal);
 
 	vec3 normalInWorldSpace = normalize(mat3(push.normalMatrix) * normal);
 

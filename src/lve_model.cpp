@@ -31,49 +31,40 @@ namespace lve {
 		createVertexBuffers(builder.vertices);
 		createIndexBuffer(builder.indices);
 	}
-	LveModel::~LveModel() {
-		vkDestroyBuffer(lveDevice.device(), vertexBuffer, nullptr);
-		vkFreeMemory(lveDevice.device(), vertexBufferMemory, nullptr);
-		if (hasIndexBuffer) {
-			vkDestroyBuffer(lveDevice.device(), indexBuffer, nullptr);
-			vkFreeMemory(lveDevice.device(), indexBufferMemory, nullptr);
-		}
-	}
+	LveModel::~LveModel() {}
 
 	void LveModel::createVertexBuffers(const std::vector<Vertex> &vertices) {
 		vertexCount = static_cast<uint32_t>(vertices.size());
 		assert(vertexCount >= 3u && "Vertex count must be at least 3");
-		VkDeviceSize bufferSize = sizeof(vertices[0]) * vertexCount;
-		VkBuffer stagingBuffer;
-		VkDeviceMemory stagingBufferMemory;
+		uint32_t vertexSize = sizeof(vertices[0]);
+		VkDeviceSize bufferSize = vertexSize * vertexCount;
+
+		// Create staging buffer on GPU -- because VK_..._HOST_VISIBLE_BIT not preferable, host-visible memory is slower than local device-memory
+		LveBuffer stagingBuffer {
+			lveDevice,
+			vertexSize,
+			vertexCount,
+			VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, // VK_..._HOST_COHERENT_BIT tells vulkan to flush memory in the CPU at `data` to the GPU
+		};
 
 		//* Having a buffer accessable by the CPU is slow. Create a staging buffer
 		//* from CPU->GPU, and copy from GPU->GPU's local memory to speed things up
 
-		// Create staging buffer on GPU -- VK_..._HOST_VISIBLE_BIT not preferable
-		lveDevice.createBuffer(
-			bufferSize,
-			VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, // VK_..._HOST_COHERENT_BIT tells vulkan to flush memory in the CPU at `data` to the GPU
-			stagingBuffer,
-			stagingBufferMemory);
-
 		// Map, Copy, and Unmap vertex data into staging buffer
-		void* data;
-		vkMapMemory(lveDevice.device(), stagingBufferMemory, 0, bufferSize, 0, &data);
-		memcpy(data, vertices.data(), static_cast<size_t>(bufferSize));
-		vkUnmapMemory(lveDevice.device(), stagingBufferMemory);
-
-		// Create vertex buffer on GPU
-		lveDevice.createBuffer(
-			bufferSize,
+		stagingBuffer.map();
+		stagingBuffer.writeToBuffer((void*)vertices.data());
+		
+		
+		vertexBuffer = std::make_unique<LveBuffer>(
+			lveDevice,
+			vertexSize,
+			vertexCount,
 			VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, // Use local GPU memory; Super fast
-			vertexBuffer,
-			vertexBufferMemory);
-		lveDevice.copyBuffer(stagingBuffer, vertexBuffer, bufferSize); // Flush memory from the staging buffer to the vertex buffer
-		vkDestroyBuffer(lveDevice.device(), stagingBuffer, nullptr);
-		vkFreeMemory(lveDevice.device(), stagingBufferMemory, nullptr);
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT // Use local GPU memory; Super fast
+		);
+
+		lveDevice.copyBuffer(stagingBuffer.getBuffer(), vertexBuffer->getBuffer(), bufferSize); // Flush memory from the staging buffer to the vertex buffer
 	}
 	void LveModel::createIndexBuffer(const std::vector<uint32_t> &indices) {
 		indexCount = static_cast<uint32_t>(indices.size());
@@ -81,41 +72,39 @@ namespace lve {
 		if (!hasIndexBuffer)
 			return;
 
-		VkDeviceSize bufferSize = sizeof(indices[0]) * indexCount;
+		uint32_t indexSize = sizeof(indices[0]);
+		VkDeviceSize bufferSize = indexSize * indexCount;
 
 		//* Same as `createVertexBuffers`. See there for comments
-		VkBuffer stagingBuffer; VkDeviceMemory stagingBufferMemory;
 
-		lveDevice.createBuffer(
-			bufferSize,
+		LveBuffer stagingBuffer{
+			lveDevice,
+			indexSize,
+			indexCount,
 			VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-			stagingBuffer,
-			stagingBufferMemory
-		);
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+		};
 
-		void* data;
-		vkMapMemory(lveDevice.device(), stagingBufferMemory, 0, bufferSize, 0, &data);
-		memcpy(data, indices.data(), static_cast<size_t>(bufferSize));
-		vkUnmapMemory(lveDevice.device(), stagingBufferMemory);
 
-		lveDevice.createBuffer(
-			bufferSize,
+		stagingBuffer.map();
+		stagingBuffer.writeToBuffer((void*)indices.data());
+		
+		indexBuffer = std::make_unique<LveBuffer>(
+			lveDevice,
+			indexSize,
+			indexCount,
 			VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-			indexBuffer,
-			indexBufferMemory
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
 		);
-		lveDevice.copyBuffer(stagingBuffer, indexBuffer, bufferSize);
-		vkDestroyBuffer(lveDevice.device(), stagingBuffer, nullptr);
-		vkFreeMemory(lveDevice.device(), stagingBufferMemory, nullptr);
+
+		lveDevice.copyBuffer(stagingBuffer.getBuffer(), indexBuffer->getBuffer(), bufferSize); // Flush memory from the staging buffer to the vertex buffer
 	}
 	void LveModel::bind(VkCommandBuffer commandBuffer) {
-		VkBuffer buffers[] = {vertexBuffer};
+		VkBuffer buffers[] = {vertexBuffer->getBuffer()};
 		VkDeviceSize offsets[] = {0};
 		vkCmdBindVertexBuffers(commandBuffer, 0, 1, buffers, offsets);
 		if (hasIndexBuffer) {
-			vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+			vkCmdBindIndexBuffer(commandBuffer, indexBuffer->getBuffer(), 0, VK_INDEX_TYPE_UINT32);
 		}
 	}
 	void LveModel::draw(VkCommandBuffer commandBuffer) {

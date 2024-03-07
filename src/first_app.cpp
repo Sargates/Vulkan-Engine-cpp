@@ -3,6 +3,7 @@
 #include "lve_camera.hpp"
 #include "simple_render_system.hpp"
 #include "keyboard_movement_controller.hpp"
+#include "lve_buffer.hpp"
 #include "math.hpp"
 
 #include <iostream>
@@ -18,39 +19,14 @@ glm::vec2 lastMousePos{-1.0};
 lve::LveCamera* activeCamera = nullptr;
 
 namespace lve {
-	
-	FirstApp::FirstApp() {
-		loadGameObjects();
-	}
+
+	struct GlobalUBO {
+		glm::mat4 projectionView{1.f};
+		glm::vec3 lightDirection = glm::normalize(glm::vec3{1.f, 3.f, -1.f});
+	};
+
+	FirstApp::FirstApp() { loadGameObjects(); }
 	FirstApp::~FirstApp() {}
-
-	std::unique_ptr<LveModel> createCubeModel(LveDevice& device, glm::vec3 offset) {
-		LveModel::Builder modelBuilder{};
-		modelBuilder.vertices = {
-			{{0.f, 0.f, 0.f}, {0.f, 0.f, 0.f}}, // Black	- 0
-			{{0.f, 0.f, 1.f}, {0.f, 0.f, 1.f}}, // Blue		- 1
-			{{0.f, 1.f, 0.f}, {0.f, 1.f, 0.f}}, // Green	- 2
-			{{0.f, 1.f, 1.f}, {0.f, 1.f, 1.f}}, // Cyan		- 3
-			{{1.f, 0.f, 0.f}, {1.f, 0.f, 0.f}}, // Red		- 4
-			{{1.f, 0.f, 1.f}, {1.f, 0.f, 1.f}}, // Magenta	- 5
-			{{1.f, 1.f, 0.f}, {1.f, 1.f, 0.f}}, // Yellow	- 6
-			{{1.f, 1.f, 1.f}, {1.f, 1.f, 1.f}}  // White	- 7
-		};
-
-		modelBuilder.indices = {
-			0, 2, 4,   4, 2, 6,	// Front
-			4, 6, 5,   5, 6, 7,	// Right
-			5, 7, 1,   1, 7, 3,	// Back
-			1, 3, 2,   1, 2, 0,	// Left
-			1, 0, 5,   0, 4, 5,	// Top
-			2, 3, 7,   2, 7, 6	// Bottom
-		};
-
-		for (auto& v : modelBuilder.vertices) {
-			v.position += offset;
-		}
-		return std::make_unique<LveModel>(device, modelBuilder);
-	}
 
 	std::unique_ptr<LveModel> createGrid(LveDevice& device, glm::vec3 offset, float size, glm::ivec2 dimensions) {
 		LveModel::Builder modelBuilder{};
@@ -88,8 +64,8 @@ namespace lve {
 		activeCamera->transform.rotation.x += delta.y; // Delta-Y maps to rotation about X-axis -- Negative because Vulkan
 		activeCamera->transform.rotation.y += delta.x; // Delta-X maps to rotation about Y-axis
 
-		float max = 0.01f + glm::half_pi<float>();
-		float min = 0.01f + -glm::half_pi<float>();
+		float max = glm::half_pi<float>() - 0.01f; // A little smaller than pi/2
+		float min = 0.01f - glm::half_pi<float>(); // A little bigger than -pi/2
 		activeCamera->transform.rotation.x = std::clamp(activeCamera->transform.rotation.x, min, max);
 
 
@@ -97,27 +73,43 @@ namespace lve {
 		activeCamera->UpdateView();
 		lastMousePos = currentPos;
 	}
-	// void handleKey(GLFWwindow* window, int key, int scancode, int action, int mods) {
-	// 	if (key == GLFW_KEY_W) { activeCamera->transform.position += activeCamera->transform.forward; }
-	// 	if (key == GLFW_KEY_S) { activeCamera->transform.position += activeCamera->transform.backward; }
-	// 	if (key == GLFW_KEY_A) { activeCamera->transform.position += activeCamera->transform.left; }
-	// 	if (key == GLFW_KEY_D) { activeCamera->transform.position += activeCamera->transform.right; }
-	// 	if (key == GLFW_KEY_SPACE) { activeCamera->transform.position += activeCamera->transform.up; }
-	// 	if (key == GLFW_KEY_LEFT_SHIFT) { activeCamera->transform.position += activeCamera->transform.down; }
-	// 	activeCamera->UpdateView();
-	// }
 	void checkKeys(GLFWwindow* window, float dt) {
-		if (glfwGetKey(window, GLFW_KEY_W))          { activeCamera->transform.position += dt * activeCamera->transform.forward; }
-		if (glfwGetKey(window, GLFW_KEY_S))          { activeCamera->transform.position += dt * activeCamera->transform.backward; }
-		if (glfwGetKey(window, GLFW_KEY_A))          { activeCamera->transform.position += dt * activeCamera->transform.left; }
-		if (glfwGetKey(window, GLFW_KEY_D))          { activeCamera->transform.position += dt * activeCamera->transform.right; }
-		if (glfwGetKey(window, GLFW_KEY_SPACE))      { activeCamera->transform.position += dt * activeCamera->transform.up; }
-		if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT)) { activeCamera->transform.position += dt * activeCamera->transform.down; }
+		glm::vec3 keyVector{};
+		if (glfwGetKey(window, GLFW_KEY_W))          { keyVector.z += 1; }
+		if (glfwGetKey(window, GLFW_KEY_S))          { keyVector.z -= 1; }
+		if (glfwGetKey(window, GLFW_KEY_D))          { keyVector.x += 1; }
+		if (glfwGetKey(window, GLFW_KEY_A))          { keyVector.x -= 1; }
+		if (glfwGetKey(window, GLFW_KEY_SPACE))      { keyVector.y += 1; }
+		if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT)) { keyVector.y -= 1; }
+
+		glm::vec3& forward=activeCamera->transform.forward;
+		glm::vec3&   right=activeCamera->transform.right;
+		glm::vec2 forwardXZ = glm::normalize(glm::vec2{forward.x, forward.z}) * keyVector.z;
+		glm::vec2   rightXZ = glm::normalize(glm::vec2{right.x, right.z})     * keyVector.x;
+		glm::vec2 finalXZ = (keyVector.z != 0 || keyVector.x != 0) ? glm::normalize(forwardXZ + rightXZ) : glm::zero<glm::vec3>();
+		activeCamera->transform.position += dt * glm::vec3{finalXZ.x, keyVector.y, finalXZ.y}; // finalXZ is a 2d vector - no Z comp
 		activeCamera->UpdateView();
 	}
 
 
 	void FirstApp::run() {
+
+		// See https://youtu.be/hFcmtJG3_Ao?t=57
+		// Tutorial Man doesn't like this implementation because it combines UBO data for multiple frames in 
+		// a single object. I don't think it matters because you aren't going to flush this data more than 
+		// once per frame and once you flush it, it's safe to mutate ¯\_(ツ)_/¯
+		LveBuffer globalUboBuffer{
+			lveDevice,
+			sizeof(GlobalUBO),
+			LveSwapChain::MAX_FRAMES_IN_FLIGHT,
+			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+			std::max(
+				lveDevice.properties.limits.minUniformBufferOffsetAlignment, 
+				lveDevice.properties.limits.nonCoherentAtomSize)
+		};
+
+		globalUboBuffer.map();
 
 		//! This fucking solution of needing to have a pointer you need to cast and dereference is the stupidest thing ever. Fair enough because C++ doesn't have (adequate) reflection.
 		// glfwSetWindowUserPointer(lveWindow.getWindow(), this);
@@ -155,15 +147,31 @@ namespace lve {
 
 			checkKeys(lveWindow.window(), deltaTime);
 			// cameraController.moveInPlaneXZ(lveWindow.getWindow(), frameTime, camera.transform);
-			camera.UpdateView();
 
 			float aspectRatio = lveRenderer.getAspectRatio();
 			camera.setPerspectiveProjection(glm::radians(90.f), aspectRatio, 0.1, 100.f);
 			
 
 			if (auto commandBuffer = lveRenderer.beginFrame()) {
+				int frameIndex = lveRenderer.getFrameIndex();
+				FrameInfo frameInfo{
+					frameIndex,
+					deltaTime,
+					commandBuffer,
+					camera
+				};
+				
+				// Update
+				GlobalUBO ubo{};
+				ubo.projectionView = camera.getProjection();
+				globalUboBuffer.writeToIndex(&ubo, frameIndex);
+				globalUboBuffer.flushIndex(frameIndex);
+
+
+				
+				// Render
 				lveRenderer.beginSwapChainRenderPass(commandBuffer);
-				simpleRenderSystem.renderGameObjects(commandBuffer, gameObjects, camera);
+				simpleRenderSystem.renderGameObjects(frameInfo, gameObjects);
 				lveRenderer.endSwapChainRenderPass(commandBuffer);
 				lveRenderer.endFrame();
 			}
@@ -187,14 +195,14 @@ namespace lve {
 		LveGameObject cube = LveGameObject::createGameObject();
 		cube.model = lveModel;
 		cube.transform.position = {1.f, 1.f, 0.f};
-		cube.transform.scale = glm::vec3{0.5f};
+		cube.transform.scale = glm::vec3{1.f, 1.f, 1.f};
 		gameObjects.push_back(std::move(cube));
 
 		lveModel = createGrid(lveDevice, glm::vec3{0.f}, 0.5, glm::ivec2{16});
 		LveGameObject grid = LveGameObject::createGameObject();
 		grid.model = lveModel;
-		grid.transform.rotation.z = -1.f;
-		grid.transform.position.x = -3.f;
+		// grid.transform.rotation.z = 1.f;
+		// grid.transform.position.x = -3.f;
 		gameObjects.push_back(std::move(grid));
 	}
 }
