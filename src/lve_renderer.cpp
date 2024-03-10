@@ -115,18 +115,21 @@ namespace lve {
 
 		vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
+		// Rectangle formed by (0, 0, width, height) is the rectangle that will be drawn to by Vulkan. 
+		// Setting to the size and position of the screen will have the effect of drawing directly to the screen.
+		// Multiplying `configInfo.viewport.height` by 0.5 will draw everything within the top half of the display, effectively scrunching it
 		VkViewport viewport{};
-		viewport.x = 0.0f;
-		viewport.y = static_cast<float>(lveSwapChain->getSwapChainExtent().height);
-		viewport.width = static_cast<float>(lveSwapChain->getSwapChainExtent().width);
-		viewport.height = -static_cast<float>(lveSwapChain->getSwapChainExtent().height);
-		viewport.minDepth = 0.0f;
-		viewport.maxDepth = 1.0f;
+		viewport.x = 0.0f;																	// Viewport Rectangle X coord
+		viewport.y = static_cast<float>(lveSwapChain->getSwapChainExtent().height);			// Viewport Rectangle Y coord
+		viewport.width = static_cast<float>(lveSwapChain->getSwapChainExtent().width);		// Viewport Rectangle Width
+		viewport.height = -static_cast<float>(lveSwapChain->getSwapChainExtent().height);	// Viewport Rectangle Height
+		// The min and max depth create a depth-range for the viewport
+		viewport.minDepth = 0.0f;															// Viewport Min Depth
+		viewport.maxDepth = 1.0f;															// Viewport Max Depth
+		// Rectangle formed by (offset.x, offset.y, extent.x, extent.y) is the rectangle that will act as a clipping rect for the viewport. 
 		VkRect2D scissor{{0, 0}, lveSwapChain->getSwapChainExtent()};
 		vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 		vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
-		
-		
 	}
 	void LveRenderer::endSwapChainRenderPass(VkCommandBuffer commandBuffer) {
 		assert(isFrameStarted && "Can't call endSwapChainRenderPass while frame is not in progress");

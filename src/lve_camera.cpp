@@ -26,24 +26,8 @@ namespace lve {
 		projectionMatrix[3][2] = -(far*near) / (far - near);
 	}
 
-	void LveCamera::UpdateView() {
+	void LveCamera::UpdateViewMatrix() {
 		transform.recalculateBasisDirs();
-		
-		viewMatrix = glm::mat4{1.f};
-		viewMatrix[0][0] = transform.right.x;
-		viewMatrix[1][0] = transform.right.y;
-		viewMatrix[2][0] = transform.right.z;
-		viewMatrix[0][1] = transform.up.x;
-		viewMatrix[1][1] = transform.up.y;
-		viewMatrix[2][1] = transform.up.z;
-		viewMatrix[0][2] = transform.forward.x;
-		viewMatrix[1][2] = transform.forward.y;
-		viewMatrix[2][2] = transform.forward.z;
-		viewMatrix[3][0] = -glm::dot(transform.right, transform.position);
-		viewMatrix[3][1] = -glm::dot(transform.up, transform.position);
-		viewMatrix[3][2] = -glm::dot(transform.forward, transform.position);
-
-		// viewMatrix = glm::scale(viewMatrix, transform.scale); // Scaling
+		viewMatrix = transform.getWorldToLocal();
 	}
-
 }

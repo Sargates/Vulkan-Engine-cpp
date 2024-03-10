@@ -1,6 +1,7 @@
 #pragma once
 
 #include "math.hpp"
+#include <cassert>
 
 namespace lve {
 	struct Transform {
@@ -9,22 +10,40 @@ namespace lve {
 		glm::vec3 rotation;
 		glm::vec3 position;
 		glm::vec3 scale{1.f, 1.f, 1.f};
-		glm::mat4 getLocalToWorldMatrix() {
+		glm::mat4 getLocalToWorld() {
 			recalculateBasisDirs(); // Probably bad to call this automatically, I don't care because ensuring a prior call each time would be annoying
+
+
+			// Translate
 			glm::mat4 transform = glm::translate({1.f}, position);
 
-			// Rotation
-			transform[0][0] = right.x;
-			transform[0][1] = right.y;
-			transform[0][2] = right.z;
-			transform[1][0] = up.x;
-			transform[1][1] = up.y;
-			transform[1][2] = up.z;
-			transform[2][0] = forward.x;
-			transform[2][1] = forward.y;
-			transform[2][2] = forward.z;
+			// Rotate
+			transform[0][0] = right.x; transform[1][0] =  up.x; transform[2][0] = forward.x;
+			transform[0][1] = right.y; transform[1][1] =  up.y; transform[2][1] = forward.y;
+			transform[0][2] = right.z; transform[1][2] =  up.z; transform[2][2] = forward.z;
 
-			transform = glm::scale(transform, scale); // Scaling
+			// Scale
+			transform = glm::scale(transform, scale);
+
+			return transform;
+		}
+		glm::mat4 getWorldToLocal() {
+			// Order of operations for Local->World is: Translate -> Rotate -> Scale
+			// So reverse the order for World->Local: Scale -> Rotate -> Translate
+
+			recalculateBasisDirs(); // Probably bad to call this automatically, I don't care because ensuring a prior call each time would be annoying
+
+			// Scale
+			glm::mat4 transform = glm::scale({1.f}, scale);
+
+			// Rotate
+			transform[0][0] =   right.x; transform[1][0] =   right.y; transform[2][0] =   right.z;
+			transform[0][1] =      up.x; transform[1][1] =      up.y; transform[2][1] =      up.z;
+			transform[0][2] = forward.x; transform[1][2] = forward.y; transform[2][2] = forward.z;
+
+			// Translate
+			transform = glm::translate(transform, -position);
+
 			return transform;
 		}
 
@@ -32,37 +51,15 @@ namespace lve {
 			// Rotation
 			glm::mat3 out{};
 
+			assert((scale.x != 0.f && scale.y != 0.f && scale.z != 0.f) && "Component in `scale` vector cannot be 0 when retrieving the normal matrix");
+
 			const glm::vec3 invScale = 1.0f / scale;
 
-			out[0][0] = invScale.x * right.x;
-			out[0][1] = invScale.x * right.y;
-			out[0][2] = invScale.x * right.z;
-			out[1][0] = invScale.y * up.x;
-			out[1][1] = invScale.y * up.y;
-			out[1][2] = invScale.y * up.z;
-			out[2][0] = invScale.z * forward.x;
-			out[2][1] = invScale.z * forward.y;
-			out[2][2] = invScale.z * forward.z;
+			out[0][0] = invScale.x * right.x; out[1][0] = invScale.x * up.x; out[2][0] = invScale.x * forward.x;
+			out[0][1] = invScale.y * right.y; out[1][1] = invScale.y * up.y; out[2][1] = invScale.y * forward.y;
+			out[0][2] = invScale.z * right.z; out[1][2] = invScale.z * up.z; out[2][2] = invScale.z * forward.z;
 
 			return out;
-
-			// return glm::mat3 {
-			// 	{
-			// 		invScale.x * (c1*c3+s1*s2*s3),
-			// 		invScale.x * (c2*s3),
-			// 		invScale.x * (c1*s2*s3-c3*s1)
-			// 	},
-			// 	{
-			// 		invScale.y * (c3*s1*s2-c1*s3),
-			// 		invScale.y * (c2*c3),
-			// 		invScale.y * (c1*c3*s2+s1*s3)
-			// 	},
-			// 	{
-			// 		invScale.z * (c2*s1),
-			// 		invScale.z * (-s2),
-			// 		invScale.z * (c1*c2)
-			// 	},
-			// };
 		}
 
 		void recalculateBasisDirs() {
@@ -70,9 +67,9 @@ namespace lve {
 			const float c2 = glm::cos(rotation.x); const float s2 = glm::sin(rotation.x);
 			const float c3 = glm::cos(rotation.z); const float s3 = glm::sin(rotation.z);
 
-			right = {c1*c3+s1*s2*s3, c2*s3, c1*s2*s3-c3*s1 };
-			up   = {c3*s1*s2-c1*s3, c2*c3, c1*c3*s2+s1*s3};	// Up and Down are flipped in vulkan because I haven't fixed that yet, changing the variable names is the easiest fix for right now
-			forward      = {c2*s1, -s2, c1*c2};
+			right    = {c1*c3+s1*s2*s3, c2*s3, c1*s2*s3-c3*s1 };
+			up       = {c3*s1*s2-c1*s3, c2*c3, c1*c3*s2+s1*s3};
+			forward  = {c2*s1, -s2, c1*c2};
 			backward = -forward;
 			left     = -right;
 			down     = -up;

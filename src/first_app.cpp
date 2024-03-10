@@ -16,16 +16,25 @@
 
 glm::vec2 lastMousePos{-1.0};
 
-lve::LveCamera* activeCamera = nullptr;
+
 
 namespace lve {
 
 	struct GlobalUBO {
 		glm::mat4 projectionView{1.f};
-		glm::vec3 lightDirection = glm::normalize(glm::vec3{1.f, 3.f, -1.f});
+		glm::vec3 lightDirection = glm::normalize(glm::vec3{-1.f, -3.f, 1.f});
 	};
+	LveCamera* activeCamera = nullptr;
 
-	FirstApp::FirstApp() { loadGameObjects(); }
+
+	FirstApp::FirstApp() {
+		globalPool = LveDescriptorPool::Builder{lveDevice}
+			.setMaxSets(LveSwapChain::MAX_FRAMES_IN_FLIGHT)
+			.addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, LveSwapChain::MAX_FRAMES_IN_FLIGHT)
+			.build();
+
+		loadGameObjects();
+	}
 	FirstApp::~FirstApp() {}
 
 	std::unique_ptr<LveModel> createGrid(LveDevice& device, glm::vec3 offset, float size, glm::ivec2 dimensions) {
@@ -59,9 +68,9 @@ namespace lve {
 			lastMousePos = glm::vec2{x, y};
 
 		glm::vec2 currentPos{x, y};
-		glm::vec2 delta = (currentPos-lastMousePos) / 900.0f;
+		glm::vec2 delta = (currentPos-lastMousePos) * 0.001f;
 		
-		activeCamera->transform.rotation.x += delta.y; // Delta-Y maps to rotation about X-axis -- Negative because Vulkan
+		activeCamera->transform.rotation.x += delta.y; // Delta-Y maps to rotation about X-axis
 		activeCamera->transform.rotation.y += delta.x; // Delta-X maps to rotation about Y-axis
 
 		float max = glm::half_pi<float>() - 0.01f; // A little smaller than pi/2
@@ -70,7 +79,7 @@ namespace lve {
 
 
 
-		activeCamera->UpdateView();
+		activeCamera->UpdateViewMatrix();
 		lastMousePos = currentPos;
 	}
 	void checkKeys(GLFWwindow* window, float dt) {
@@ -86,34 +95,42 @@ namespace lve {
 		glm::vec3&   right=activeCamera->transform.right;
 		glm::vec2 forwardXZ = glm::normalize(glm::vec2{forward.x, forward.z}) * keyVector.z;
 		glm::vec2   rightXZ = glm::normalize(glm::vec2{right.x, right.z})     * keyVector.x;
-		glm::vec2 finalXZ = (keyVector.z != 0 || keyVector.x != 0) ? glm::normalize(forwardXZ + rightXZ) : glm::zero<glm::vec3>();
-		activeCamera->transform.position += dt * glm::vec3{finalXZ.x, keyVector.y, finalXZ.y}; // finalXZ is a 2d vector - no Z comp
-		activeCamera->UpdateView();
+		glm::vec2   finalXZ = (keyVector.z != 0 || keyVector.x != 0) ? glm::normalize(forwardXZ + rightXZ) : glm::zero<glm::vec3>();
+		activeCamera->transform.position += dt * glm::vec3{finalXZ.x, keyVector.y, finalXZ.y}; // finalXZ is a 2d vector - use finalXZ.y; no Z comp
+		activeCamera->UpdateViewMatrix();
 	}
 
 
 	void FirstApp::run() {
 
-		// See https://youtu.be/hFcmtJG3_Ao?t=57
-		// Tutorial Man doesn't like this implementation because it combines UBO data for multiple frames in 
-		// a single object. I don't think it matters because you aren't going to flush this data more than 
-		// once per frame and once you flush it, it's safe to mutate ¯\_(ツ)_/¯
-		LveBuffer globalUboBuffer{
-			lveDevice,
-			sizeof(GlobalUBO),
-			LveSwapChain::MAX_FRAMES_IN_FLIGHT,
-			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
-			std::max(
-				lveDevice.properties.limits.minUniformBufferOffsetAlignment, 
-				lveDevice.properties.limits.nonCoherentAtomSize)
-		};
+		std::vector<std::unique_ptr<LveBuffer>> uboBuffers(LveSwapChain::MAX_FRAMES_IN_FLIGHT);
+		for (int i=0; i<uboBuffers.size(); i++) {
+			uboBuffers[i] = std::make_unique<LveBuffer>(
+				lveDevice,
+				sizeof(GlobalUBO),
+				1,
+				VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+			uboBuffers[i]->map();
+		}
 
-		globalUboBuffer.map();
+		auto globalSetLayout = LveDescriptorSetLayout::Builder{lveDevice}
+			.addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
+			.build();
+		
+		std::vector<VkDescriptorSet> globalDescriptorSets(LveSwapChain::MAX_FRAMES_IN_FLIGHT);
+		for (int i=0; i<globalDescriptorSets.size(); i++) {
+			auto bufferInfo = uboBuffers[i]->descriptorInfo();
+			LveDescriptorWriter(*globalSetLayout, *globalPool)
+				.writeBuffer(0, &bufferInfo)
+				.build(globalDescriptorSets[i]);
+
+		}
 
 		//! This fucking solution of needing to have a pointer you need to cast and dereference is the stupidest thing ever. Fair enough because C++ doesn't have (adequate) reflection.
 		// glfwSetWindowUserPointer(lveWindow.getWindow(), this);
-		SimpleRenderSystem simpleRenderSystem{lveDevice, lveRenderer.getSwapChainRenderPass()};
+
+		SimpleRenderSystem simpleRenderSystem{lveDevice, lveRenderer.getSwapChainRenderPass(), globalSetLayout->getDescriptorSetLayout()};
 
 		// Cameras
 		LveCamera camera{};
@@ -128,8 +145,8 @@ namespace lve {
 		// glfwSetKeyCallback(lveWindow.getWindow(), handleKey);
 		glfwSetInputMode(lveWindow.window(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 		glfwSetCursorPosCallback(lveWindow.window(), mouseCallback);
-		
-		
+
+
 		// Clock
 		auto currentTime = std::chrono::high_resolution_clock::now();
 
@@ -149,7 +166,7 @@ namespace lve {
 			// cameraController.moveInPlaneXZ(lveWindow.getWindow(), frameTime, camera.transform);
 
 			float aspectRatio = lveRenderer.getAspectRatio();
-			camera.setPerspectiveProjection(glm::radians(90.f), aspectRatio, 0.1, 100.f);
+			camera.setPerspectiveProjection(glm::radians(90.f), aspectRatio, 0.01f, 100.f);
 			
 
 			if (auto commandBuffer = lveRenderer.beginFrame()) {
@@ -158,14 +175,15 @@ namespace lve {
 					frameIndex,
 					deltaTime,
 					commandBuffer,
-					camera
-				};
+					camera,
+					globalDescriptorSets[frameIndex]};
 				
 				// Update
 				GlobalUBO ubo{};
-				ubo.projectionView = camera.getProjection();
-				globalUboBuffer.writeToIndex(&ubo, frameIndex);
-				globalUboBuffer.flushIndex(frameIndex);
+				// This matrix will convert a worldspace coordinate to a screenspace coordinate relative to the camera
+				ubo.projectionView = camera.getProjection() * camera.transform.getWorldToLocal();
+				uboBuffers[frameIndex]->writeToBuffer(&ubo);
+				uboBuffers[frameIndex]->flush();
 
 
 				
@@ -186,7 +204,7 @@ namespace lve {
 		std::shared_ptr<LveModel> lveModel = LveModel::createModelFromFile(lveDevice, "./resources/smooth_vase.obj");
 		LveGameObject gameObject = LveGameObject::createGameObject();
 		gameObject.model = lveModel;
-		gameObject.transform.position = {-1.f, 1.f, 0.f};
+		gameObject.transform.position = {-1.f, 2.f, 0.f};
 		gameObject.transform.scale = glm::vec3{3.f};
 		gameObjects.push_back(std::move(gameObject));
 
@@ -194,15 +212,41 @@ namespace lve {
 		lveModel = LveModel::createModelFromFile(lveDevice, "./resources/colored_cube.obj");
 		LveGameObject cube = LveGameObject::createGameObject();
 		cube.model = lveModel;
-		cube.transform.position = {1.f, 1.f, 0.f};
+		cube.transform.position = {1.f, 2.f, 0.f};
 		cube.transform.scale = glm::vec3{1.f, 1.f, 1.f};
 		gameObjects.push_back(std::move(cube));
 
 		lveModel = createGrid(lveDevice, glm::vec3{0.f}, 0.5, glm::ivec2{16});
 		LveGameObject grid = LveGameObject::createGameObject();
 		grid.model = lveModel;
-		// grid.transform.rotation.z = 1.f;
-		// grid.transform.position.x = -3.f;
 		gameObjects.push_back(std::move(grid));
+
+
+		// XYZ Basis Grid (minecraft-like)
+
+		LveModel::Builder builder{};
+		builder.loadModel("./resources/cube.obj");
+		
+		LveGameObject xVector = LveGameObject::createGameObject();
+		for (auto& vertex : builder.vertices) { vertex.color = {1.f, 0.f, 0.f}; } // Red
+		xVector.model = std::make_unique<LveModel>(lveDevice, builder);
+		xVector.transform.position = {0.f, 1.f, 0.f};
+		xVector.transform.scale = {1.f, 0.1f, 0.1f};
+		gameObjects.push_back(std::move(xVector));
+		
+		LveGameObject yVector = LveGameObject::createGameObject();
+		for (auto& vertex : builder.vertices) { vertex.color = {0.f, 1.f, 0.f}; } // Green
+		yVector.model = std::make_unique<LveModel>(lveDevice, builder);
+		yVector.transform.position = {0.f, 1.f, 0.f};
+		yVector.transform.scale = {0.1f, 1.f, 0.1f};
+		gameObjects.push_back(std::move(yVector));
+		
+		LveGameObject zVector = LveGameObject::createGameObject();
+		for (auto& vertex : builder.vertices) { vertex.color = {0.f, 0.f, 1.f}; } // Blue
+		zVector.model = std::make_unique<LveModel>(lveDevice, builder);
+		zVector.transform.position = {0.f, 1.f, 0.f};
+		zVector.transform.scale = {0.1f, 0.1f, 1.f};
+		gameObjects.push_back(std::move(zVector));
+
 	}
 }

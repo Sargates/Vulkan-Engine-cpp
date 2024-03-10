@@ -1,11 +1,12 @@
 # Run `make clean` before changing name of program
 PROGRAM := main
 
-# Primary Directive
+# Primary Directive -- Auto-check if instance is a WSL instance. Could cause issues with windows' native MinGW
+ifneq "${ISWSL}" ""
 $(PROGRAM): windows run
-
-# Function that expands to all files recursively
-rwildcard=$(wildcard $1$2) $(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2))
+else
+$(PROGRAM): linux run
+endif
 
 # Directory where all source files are stored
 SRC_DIR := src
@@ -30,21 +31,20 @@ SHADER_FRAG_FILES := $(shell find $(SHADER_DIR) -name '*.frag')
 SHADER_VERT_SPIRV_FILES := $(patsubst $(SHADER_DIR)/%.vert,$(SHADER_OUT_DIR)/%.vert.spv,$(SHADER_VERT_FILES))
 SHADER_FRAG_SPIRV_FILES := $(patsubst $(SHADER_DIR)/%.frag,$(SHADER_OUT_DIR)/%.frag.spv,$(SHADER_FRAG_FILES))
 
-
 $(SHADER_OUT_DIR)/%.spv: $(SHADER_DIR)/%
 	@echo -n "$@ "
 	@mkdir -p $(@D)
 	@$(GLSLC) -c $< -o $@
 
-# # Recompile dependent cpp files based on updated headers
-# DEPDIR := .deps
-# DEPFLAGS = -MT $@ -MMD -MP -MF $(DEPDIR)/$*.d
-
-# include $(wildcard $(DEPFILES))
+shaders: $(SHADER_VERT_SPIRV_FILES) $(SHADER_FRAG_SPIRV_FILES)
+	@echo ""
+	@echo "Shaders Compiled!"
 
 
-
-
+#! This auto dependency generation is convoluted and I hate it
+# MAKEDEPS := .makedeps
+# $(MAKEDEPS): $(SRC_FILES)
+# 	@sh gendeps.sh '$(CXX)' '$(SRC_FILES)' '$(CXXFLAGS)' '$(MAKEDEPS)'
 
 program: $(OBJ_FILES)
 	@echo ""
@@ -82,11 +82,9 @@ linux:
 	--no-print-directory
 	@echo ""
 
-shaders: $(SHADER_VERT_SPIRV_FILES) $(SHADER_FRAG_SPIRV_FILES)
-	@echo ""
-	@echo "Shaders Compiled!"
 
 test:
+	@echo ${ISWSL}
 	@echo "              SRC_FILES: $(SRC_FILES)"
 	@echo "              OBJ_FILES: $(OBJ_FILES)"
 	@echo "      SHADER_VERT_FILES: $(SHADER_VERT_FILES)"

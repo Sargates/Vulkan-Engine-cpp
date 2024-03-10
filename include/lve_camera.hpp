@@ -14,10 +14,10 @@ namespace lve {
 		void setOrthographicProjection(float left, float right, float top, float bottom, float near, float far);
 		void setPerspectiveProjection(float fovy, float aspect, float near, float far);
 
-		void UpdateView();
+		void UpdateViewMatrix();
 
 		const glm::mat4& getProjection() const { return projectionMatrix; }
-		const glm::mat4& getView() const { return viewMatrix; }
+		const glm::mat4& getView() const { return viewMatrix; }				// worldToLocalMatrix
 
 		private:
 		

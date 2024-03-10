@@ -42,7 +42,7 @@ namespace lve {
 	void LvePipeline::createGraphicsPipeline(const std::string& vertFilePath, const std::string& fragFilePath, const PipelineConfigInfo& configInfo) {
 
 		assert(configInfo.pipelineLayout != VK_NULL_HANDLE && "Cannot create graphics pipeline:: no pipelineLayout provided in configInfo");
-		assert(configInfo.renderPass != VK_NULL_HANDLE && "Cannot create graphics pipeline:: no renderPass  provided in configInfo");
+		assert(configInfo.renderPass != VK_NULL_HANDLE && "Cannot create graphics pipeline:: no renderPass provided in configInfo");
 		
 		auto vertCode = readFile(vertFilePath);
 		auto fragCode = readFile(fragFilePath);
@@ -120,22 +120,6 @@ namespace lve {
 		configInfo.inputAssemblyInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 		configInfo.inputAssemblyInfo.primitiveRestartEnable = VK_FALSE;
 
-		//! Commented code is no longer needed because we're using a dynamic viewport now
-		// // Rectangle formed by (0, 0, width, height) is the rectangle that will be drawn to by Vulkan. 
-		// // Setting to the size and position of the screen will have the effect of drawing directly to the screen.
-		// // Multiplying `configInfo.viewport.height` by 0.5 will draw everything within the top half of the display, effectively scrunching it
-		// configInfo.viewport.x = 0.0f;																		// Viewport Rectangle X coord
-		// configInfo.viewport.y = 0.0f;																		// Viewport Rectangle Y coord
-		// configInfo.viewport.width = static_cast<float>(width);												// Viewport Rectangle Width
-		// configInfo.viewport.height = static_cast<float>(height);											// Viewport Rectangle Height
-		// configInfo.viewport.minDepth = 0.0f;																// Viewport Min Depth
-		// configInfo.viewport.maxDepth = 1.0f;																// Viewport Max Depth
-		// // The min and max depth create a depth-range for the viewport
-
-		// // Rectangle formed by (offset.x, offset.y, extent.x, extent.y) is the rectangle that will act as a clipping rect for the viewport. 
-		// configInfo.scissor.offset = {0, 0};																	// Scissor Position Offset (position)
-		// configInfo.scissor.extent = {width, height};														// Scissor Position Extent (size)
-		
 		configInfo.viewportInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;				// 
 		configInfo.viewportInfo.viewportCount = 1;															// 
 		configInfo.viewportInfo.pViewports = nullptr;														// 
