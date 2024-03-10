@@ -34,7 +34,7 @@ namespace lve {
 			recalculateBasisDirs(); // Probably bad to call this automatically, I don't care because ensuring a prior call each time would be annoying
 
 			// Scale
-			glm::mat4 transform = glm::scale({1.f}, scale);
+			glm::mat4 transform = glm::scale({1.f}, 1.f/scale);
 
 			// Rotate
 			transform[0][0] =   right.x; transform[1][0] =   right.y; transform[2][0] =   right.z;

@@ -5,8 +5,6 @@
 
 #include "math.hpp"
 
-
-
 #include <memory>
 #include <vector>
 
@@ -40,7 +38,7 @@ namespace lve {
 		LveModel(LveDevice &device, const Builder& builder);
 		~LveModel();
 
-		static std::unique_ptr<LveModel> createModelFromFile(LveDevice& device, const std::string filePath);
+		static std::unique_ptr<LveModel> createModelFromFile(LveDevice& device, const std::string filePath, glm::vec3 offset={0.f, 0.f, 0.f});
 
 		LveModel(const LveModel &) = delete;
 		LveModel& operator=(const LveModel &) = delete;

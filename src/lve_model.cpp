@@ -132,11 +132,12 @@ namespace lve {
 		return attributeDescriptions;
 	}
 
-	std::unique_ptr<LveModel> LveModel::createModelFromFile(LveDevice& device, const std::string filePath) {
+	std::unique_ptr<LveModel> LveModel::createModelFromFile(LveDevice& device, const std::string filePath, glm::vec3 offset) {
 		Builder builder{};
 		builder.loadModel(filePath);
 		std::string fileName = filePath.substr(filePath.find_last_of("/") + 1);
 		std::cout << fileName << " Vertex Count: " << builder.vertices.size() << std::endl;
+		for( auto& vertex : builder.vertices) { vertex.position += offset; }
 
 		return std::make_unique<LveModel>(device, builder);
 	}

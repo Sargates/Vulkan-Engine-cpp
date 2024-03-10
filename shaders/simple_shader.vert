@@ -8,8 +8,10 @@ layout (location = 3) in vec2 uv;
 layout (location = 0) out vec3 fragColor;
 
 layout (set=0, binding=0) uniform GlobalUbo {
-	mat4 projectViewMatrix;
-	vec3 directionToLight;
+	mat4 projectionViewMatrix;
+	vec4 ambientLightColor;
+	vec3 lightPosition;
+	vec4 lightColor;
 } ubo;
 
 
@@ -23,14 +25,22 @@ const float AMBIENT_LIGHT_LEVEL = .01;
 
 
 void main() {
-	gl_Position = ubo.projectViewMatrix * push.modelMatrix * vec4(position, 1.f);
+	vec4 positionWorldSpace = push.modelMatrix * vec4(position, 1.f);
+	gl_Position = ubo.projectionViewMatrix * positionWorldSpace;
 
 	vec3 normalInWorldSpace = normalize(mat3(push.normalMatrix) * normal);
 
+	vec3 differencePositionLight = ubo.lightPosition - positionWorldSpace.xyz;
+	vec3 lightDirection = normalize(differencePositionLight);
+	float attenuation = 1.0f / dot(differencePositionLight, differencePositionLight);
 
-	// Light direction is negated because of a sign issue, `direction` symbolizes the direction
-	// the light is coming from, whereas this formula is for the direction TO the light
-	float lightIntensity = max(dot(normalInWorldSpace, -ubo.directionToLight), AMBIENT_LIGHT_LEVEL);
+	// vec3 lightColor = ubo.lightColor.xyz * ubo.lightColor.w * attenuation; // I don't like the attenuation effect, need to look into better solutions
+	vec3 lightColor = ubo.lightColor.xyz * ubo.lightColor.w;
+	vec3 ambientColor = ubo.ambientLightColor.xyz * ubo.ambientLightColor.w;
+
+
+	float lightIntensity = max(dot(normalInWorldSpace, lightDirection), 0);
+	vec3 diffuseLight = lightColor * lightIntensity;
 	
-	fragColor = lightIntensity * color;
+	fragColor = (diffuseLight + ambientColor) * color;
 }
