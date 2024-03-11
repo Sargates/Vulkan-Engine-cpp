@@ -13,7 +13,6 @@ namespace lve {
 		glm::mat4 getLocalToWorld() {
 			recalculateBasisDirs(); // Probably bad to call this automatically, I don't care because ensuring a prior call each time would be annoying
 
-
 			// Translate
 			glm::mat4 transform = glm::translate({1.f}, position);
 
@@ -34,6 +33,8 @@ namespace lve {
 			recalculateBasisDirs(); // Probably bad to call this automatically, I don't care because ensuring a prior call each time would be annoying
 
 			// Scale
+			// glm::mat4 transform{1.f};
+			assert((scale.x != 0.f && scale.y != 0.f && scale.z != 0.f) && "Component in `scale` vector cannot be 0 when retrieving the worldToLocal matrix");
 			glm::mat4 transform = glm::scale({1.f}, 1.f/scale);
 
 			// Rotate
@@ -42,7 +43,10 @@ namespace lve {
 			transform[0][2] = forward.x; transform[1][2] = forward.y; transform[2][2] = forward.z;
 
 			// Translate
-			transform = glm::translate(transform, -position);
+			
+			transform[3][0] = -glm::dot(  right, position);
+			transform[3][1] = -glm::dot(     up, position);
+			transform[3][2] = -glm::dot(forward, position);
 
 			return transform;
 		}

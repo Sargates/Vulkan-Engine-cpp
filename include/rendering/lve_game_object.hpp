@@ -1,6 +1,6 @@
 #pragma once
 
-#include "lve_model.hpp"
+#include "rendering/lve_model.hpp"
 #include "transform.hpp"
 
 
@@ -9,15 +9,28 @@
 
 namespace lve {
 
+	struct PointLightComponent {
+		float lightIntensity = 30.f;
+	};
 
 	class LveGameObject {
 		public:
 			using id_t = unsigned int;
+  			using Map = std::unordered_map<id_t, LveGameObject>;
 
 			static LveGameObject createGameObject() {
 				static id_t currentId = 0;
 				return LveGameObject(currentId++);
 			}
+			static LveGameObject makePointLight(float intensity = 10.f, glm::vec3 color = glm::vec3(1.f)) {
+				LveGameObject gameObj = LveGameObject::createGameObject();
+				gameObj.color = color;
+				gameObj.pointLight = std::make_unique<PointLightComponent>();
+				gameObj.pointLight->lightIntensity = intensity;
+				return gameObj;
+			}
+
+
 
 			LveGameObject(const LveGameObject&) = delete;
 			LveGameObject& operator=(const LveGameObject&) = delete;
@@ -29,6 +42,8 @@ namespace lve {
 			std::shared_ptr<LveModel> model{};
 			glm::vec3 color{};
 			Transform transform{};
+
+			std::unique_ptr<PointLightComponent> pointLight{};
 
 		private:
 			id_t id;

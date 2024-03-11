@@ -1,2 +1,0 @@
-bin/glslc filter=lfs diff=lfs merge=lfs -text
-bin/glslc.exe filter=lfs diff=lfs merge=lfs -text

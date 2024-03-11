@@ -1,7 +1,7 @@
 #pragma once
 
-#include "lve_device.hpp"
-#include "lve_buffer.hpp"
+#include "rendering/lve_device.hpp"
+#include "rendering/lve_buffer.hpp"
 
 #include "math.hpp"
 

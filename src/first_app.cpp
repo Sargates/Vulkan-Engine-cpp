@@ -1,9 +1,10 @@
 #include "first_app.hpp"
 
-#include "lve_camera.hpp"
-#include "simple_render_system.hpp"
+#include "rendering/lve_camera.hpp"
+#include "rendering/systems/simple_render_system.hpp"
+#include "rendering/systems/point_light_system.hpp"
 #include "keyboard_movement_controller.hpp"
-#include "lve_buffer.hpp"
+#include "rendering/lve_buffer.hpp"
 #include "math.hpp"
 
 #include <iostream>
@@ -16,18 +17,66 @@
 
 glm::vec2 lastMousePos{-1.0};
 
-int icoSphereIndex = -1;
+
+glm::vec3 hsv_to_rgb(glm::vec3 in) {
+	float h,s,v;
+	h = in.x; s = in.y; v = in.z;
+
+    h /= 360.0;  // Convert hue to the range [0, 1]
+    int r, g, b;
+
+    if (s == 0) {
+        r = g = b = static_cast<int>(v * 255);
+    } else {
+        h *= 6;  // Convert hue to the range [0, 6]
+        int i = static_cast<int>(h);
+        double f = h - i;
+        int p = static_cast<int>(255 * (v * (1 - s)));
+        int q = static_cast<int>(255 * (v * (1 - s * f)));
+        int t = static_cast<int>(255 * (v * (1 - s * (1 - f))));
+        v = static_cast<int>(255 * v);
+
+        switch (i) {
+            case 0:
+                r = v;
+                g = t;
+                b = p;
+                break;
+            case 1:
+                r = q;
+                g = v;
+                b = p;
+                break;
+            case 2:
+                r = p;
+                g = v;
+                b = t;
+                break;
+            case 3:
+                r = p;
+                g = q;
+                b = v;
+                break;
+            case 4:
+                r = t;
+                g = p;
+                b = v;
+                break;
+            default:
+                r = v;
+                g = p;
+                b = q;
+                break;
+        }
+    }
+
+    return glm::vec3{r, g, b};
+}
 
 
 
 namespace lve {
 
-	struct GlobalUBO { // See https://www.oreilly.com/library/view/opengl-programming-guide/9780132748445/app09lev1sec2.html for alignment rules
-		glm::mat4 projectionView{1.f};
-		glm::vec4 ambientLightColor{1.f, 1.f, 1.f, 0.f};
-		glm::vec3 lightPosition{1.f};
-		alignas(16) glm::vec4 lightColor{1.f, 1.f, 1.f, 0.2f}; // w comp. is light intensity
-	};
 	LveCamera* activeCamera = nullptr;
 
 
@@ -116,7 +165,7 @@ namespace lve {
 		}
 
 		auto globalSetLayout = LveDescriptorSetLayout::Builder{lveDevice}
-			.addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT)
+			.addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
 			.build();
 		
 		std::vector<VkDescriptorSet> globalDescriptorSets(LveSwapChain::MAX_FRAMES_IN_FLIGHT);
@@ -131,6 +180,7 @@ namespace lve {
 		// glfwSetWindowUserPointer(lveWindow.getWindow(), this);
 
 		SimpleRenderSystem simpleRenderSystem{lveDevice, lveRenderer.getSwapChainRenderPass(), globalSetLayout->getDescriptorSetLayout()};
+		PointLightSystem pointLightSystem{ lveDevice, lveRenderer.getSwapChainRenderPass(), globalSetLayout->getDescriptorSetLayout()};
 
 		// Cameras
 		LveCamera camera{};
@@ -145,9 +195,9 @@ namespace lve {
 		// glfwSetKeyCallback(lveWindow.getWindow(), handleKey);
 		glfwSetInputMode(lveWindow.window(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 		glfwSetCursorPosCallback(lveWindow.window(), mouseCallback);
-		gameObjects[1].transform.rotation.x = -glm::atan(1.f/glm::sqrt(2.f));
-		gameObjects[1].transform.rotation.z = glm::quarter_pi<float>();
-		gameObjects[1].transform.recalculateBasisDirs();
+		// gameObjects[1].transform.rotation.x = -glm::atan(1.f/glm::sqrt(2.f));
+		// gameObjects[1].transform.rotation.z = glm::quarter_pi<float>();
+		// gameObjects[1].transform.recalculateBasisDirs();
 
 
 		// Clock
@@ -162,13 +212,11 @@ namespace lve {
 			float dt = std::chrono::duration<float, std::chrono::seconds::period>(newTime - currentTime).count();
 			totalTime += dt;
 			currentTime = newTime;
-			int FPS= (dt <= 0.001f) ? 999 : 1/dt;
+			int FPS = (dt <= 0.001f) ? 999 : 1/dt;
 			std::cout << FPS << "\r";
 
 
-
 			checkKeys(lveWindow.window(), dt);
-			gameObjects[1].transform.rotation.y += dt;
 
 			float aspectRatio = lveRenderer.getAspectRatio();
 			camera.setPerspectiveProjection(glm::radians(90.f), aspectRatio, 0.01f, 100.f);
@@ -180,22 +228,20 @@ namespace lve {
 					dt,
 					commandBuffer,
 					camera,
-					globalDescriptorSets[frameIndex]};
-				
+					globalDescriptorSets[frameIndex],
+					gameObjects};
+
 				// Update
 				GlobalUBO ubo{};
-				// This matrix will convert a worldspace coordinate to a screenspace coordinate relative to the camera
-				ubo.projectionView = camera.getProjection() * camera.transform.getWorldToLocal();
-				gameObjects[icoSphereIndex].transform.position = glm::vec3{6.f * glm::cos(totalTime), 4.f, 6.f * glm::sin(totalTime)};
-				ubo.lightPosition = gameObjects[icoSphereIndex].transform.position;
+				update(ubo, frameInfo);
 				uboBuffers[frameIndex]->writeToBuffer(&ubo);
 				uboBuffers[frameIndex]->flush();
 
 
-				
 				// Render
 				lveRenderer.beginSwapChainRenderPass(commandBuffer);
-				simpleRenderSystem.renderGameObjects(frameInfo, gameObjects);
+				simpleRenderSystem.renderGameObjects(frameInfo);
+				pointLightSystem.renderLights(frameInfo);
 				lveRenderer.endSwapChainRenderPass(commandBuffer);
 				lveRenderer.endFrame();
 			}
@@ -205,60 +251,102 @@ namespace lve {
 
 		vkDeviceWaitIdle(lveDevice.device());
 	}
+
+	void FirstApp::update(GlobalUBO &ubo, FrameInfo &frameInfo) {
+		ubo.projectionMatrix = frameInfo.camera.getProjection();
+		ubo.cameraMatrix = frameInfo.camera.transform.getWorldToLocal();
+		ubo.invCameraMatrix = frameInfo.camera.transform.getLocalToWorld();
+
+		auto rotateLights = glm::rotate(glm::mat4(1.f), frameInfo.frameTime, {0.f, 1.f, 0.f});
+		int lightIndex = 0;
+		for (auto& kv : frameInfo.gameObjects) {
+			auto& obj = kv.second;
+			if (obj.pointLight == nullptr) continue;
+
+			// update light position
+			obj.transform.position = glm::vec3(rotateLights * glm::vec4(obj.transform.position, 1.f));
+
+			// copy light to ubo
+			ubo.lights[lightIndex].position = obj.transform.position;
+			ubo.lights[lightIndex].color = glm::vec4(obj.color, obj.pointLight->lightIntensity);
+			if (++lightIndex == MAX_LIGHTS) break;
+		}
+		ubo.numLights = lightIndex;
+	}
+
 	void FirstApp::loadGameObjects() {
 
-		std::shared_ptr<LveModel> lveModel = LveModel::createModelFromFile(lveDevice, "./resources/smooth_vase.obj");
-		LveGameObject gameObject = LveGameObject::createGameObject();
-		gameObject.model = lveModel;
-		gameObject.transform.position = {-1.f, 1.f, 0.f};
-		gameObject.transform.scale = glm::vec3{3.f};
-		gameObjects.push_back(std::move(gameObject));
+		
+		std::shared_ptr<LveModel> lveModel = LveModel::createModelFromFile(lveDevice, "resources/flat_vase.obj");
+		auto flatVase = LveGameObject::createGameObject();
+		flatVase.model = lveModel;
+		flatVase.transform.position = {-.5f, -.5f, 0.f};
+		flatVase.transform.scale = {3.f, 1.5f, 3.f};
+		gameObjects.emplace(flatVase.getId(), std::move(flatVase));
 
-
-		lveModel = LveModel::createModelFromFile(lveDevice, "./resources/colored_cube.obj", glm::vec3{-0.5f});
-		LveGameObject cube = LveGameObject::createGameObject();
-		cube.model = lveModel;
-		cube.transform.position = {1.f, 2.f, 0.f};
-		cube.transform.scale = glm::vec3{1.f, 1.f, 1.f};
-		gameObjects.push_back(std::move(cube));
+		lveModel = LveModel::createModelFromFile(lveDevice, "resources/smooth_vase.obj");
+		auto smoothVase = LveGameObject::createGameObject();
+		smoothVase.model = lveModel;
+		smoothVase.transform.position = {.5f, -.5f, 0.f};
+		smoothVase.transform.scale = {3.f, 1.5f, 3.f};
+		gameObjects.emplace(smoothVase.getId(), std::move(smoothVase));
 
 		lveModel = createGrid(lveDevice, glm::vec3{0.f}, 0.5, glm::ivec2{16});
-		LveGameObject grid = LveGameObject::createGameObject();
-		grid.model = lveModel;
-		gameObjects.push_back(std::move(grid));
+		auto floor = LveGameObject::createGameObject();
+		floor.model = lveModel;
+		floor.transform.position = {0.f, -.5f, .5f};
+		floor.transform.scale = {3.f, 1.f, 3.f};
+		gameObjects.emplace(floor.getId(), std::move(floor));
 
-		lveModel = LveModel::createModelFromFile(lveDevice, "./resources/icosphere.obj");
-		LveGameObject icosphere = LveGameObject::createGameObject();
-		icosphere.model = lveModel;
-		icosphere.transform.scale = glm::vec3{0.1f};
-		gameObjects.push_back(std::move(icosphere));
-		icoSphereIndex = icosphere.getId();
+		// https://www.color-hex.com/color-palette/5361
+		std::vector<glm::vec3> colors{
+				{1.f, .1f, .1f},
+				{.1f, .1f, 1.f},
+				{.1f, 1.f, .1f},
+				{1.f, 1.f, .1f},
+				{.1f, 1.f, 1.f},
+				{1.f, 1.f, 1.f}
+		};
+
+		for (int i = 0; i < std::min(colors.size(), (size_t)MAX_LIGHTS); i++) {
+			auto pointLight = LveGameObject::makePointLight(0.2f);
+			pointLight.color = colors[i];
+			auto rotateLight = glm::rotate(glm::mat4(1.f), (i * glm::two_pi<float>()) / colors.size(), {0.f, -1.f, 0.f});
+			pointLight.transform.position = glm::vec3(rotateLight * glm::vec4{1.f});
+			gameObjects.emplace(pointLight.getId(), std::move(pointLight));
+		}
+
+		// lveModel = LveModel::createModelFromFile(lveDevice, "./resources/icosphere.obj");
+		// LveGameObject icosphere = LveGameObject::createGameObject();
+		// icosphere.model = lveModel;
+		// icosphere.transform.scale = glm::vec3{0.1f};
+		// gameObjects.emplace(icosphere.getId(), std::move(icosphere));
 
 
-		// XYZ Basis Grid (minecraft-like)
-		LveModel::Builder builder{};
-		builder.loadModel("./resources/cube.obj");
+		// // XYZ Basis Grid (minecraft-like)
+		// LveModel::Builder builder{};
+		// builder.loadModel("./resources/cube.obj");
 		
-		LveGameObject xVector = LveGameObject::createGameObject();
-		for (auto& vertex : builder.vertices) { vertex.color = {1.f, 0.f, 0.f}; } // Red
-		xVector.model = std::make_unique<LveModel>(lveDevice, builder);
-		xVector.transform.position = {0.f, 1.f, 0.f};
-		xVector.transform.scale = {.5f, 0.05f, 0.05f};
-		gameObjects.push_back(std::move(xVector));
+		// LveGameObject xVector = LveGameObject::createGameObject();
+		// for (auto& vertex : builder.vertices) { vertex.color = {1.f, 0.f, 0.f}; } // Red
+		// xVector.model = std::make_unique<LveModel>(lveDevice, builder);
+		// xVector.transform.position = {0.f, 1.f, 0.f};
+		// xVector.transform.scale = {.5f, 0.05f, 0.05f};
+		// gameObjects.emplace(xVector.getId(), std::move(xVector));
 
-		LveGameObject yVector = LveGameObject::createGameObject();
-		for (auto& vertex : builder.vertices) { vertex.color = {0.f, 1.f, 0.f}; } // Green
-		yVector.model = std::make_unique<LveModel>(lveDevice, builder);
-		yVector.transform.position = {0.f, 1.f, 0.f};
-		yVector.transform.scale = {0.05f, .5f, 0.05f};
-		gameObjects.push_back(std::move(yVector));
+		// LveGameObject yVector = LveGameObject::createGameObject();
+		// for (auto& vertex : builder.vertices) { vertex.color = {0.f, 1.f, 0.f}; } // Green
+		// yVector.model = std::make_unique<LveModel>(lveDevice, builder);
+		// yVector.transform.position = {0.f, 1.f, 0.f};
+		// yVector.transform.scale = {0.05f, .5f, 0.05f};
+		// gameObjects.emplace(yVector.getId(), std::move(yVector));
 		
-		LveGameObject zVector = LveGameObject::createGameObject();
-		for (auto& vertex : builder.vertices) { vertex.color = {0.f, 0.f, 1.f}; } // Blue
-		zVector.model = std::make_unique<LveModel>(lveDevice, builder);
-		zVector.transform.position = {0.f, 1.f, 0.f};
-		zVector.transform.scale = {0.05f, 0.05f, .5f};
-		gameObjects.push_back(std::move(zVector));
+		// LveGameObject zVector = LveGameObject::createGameObject();
+		// for (auto& vertex : builder.vertices) { vertex.color = {0.f, 0.f, 1.f}; } // Blue
+		// zVector.model = std::make_unique<LveModel>(lveDevice, builder);
+		// zVector.transform.position = {0.f, 1.f, 0.f};
+		// zVector.transform.scale = {0.05f, 0.05f, .5f};
+		// gameObjects.emplace(zVector.getId(), std::move(zVector));
 
 	}
 }
