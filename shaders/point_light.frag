@@ -25,9 +25,12 @@ layout(push_constant) uniform Push {
 } push;
 
 void main() {
+	// `fragOffset` gets passed from vertex shader
+	
+	// Using fragment interpolation, calculate distance from center of square
 	float alpha = 1.0 - sqrt(dot(fragOffset, fragOffset));
-	if (alpha <= 0.0) {
-		discard;
-	}
+	if (alpha <= 0.0) { discard; } // Discard any pixels with distance >= 1, this will only draw pixels in a circle
+
+	// Set `outColor` based on alpha value, this will cause the circle to fade toward the edges
 	outColor = vec4(2.0 * push.color.xyz * push.color.w, alpha);
 }

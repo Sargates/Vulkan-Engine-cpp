@@ -18,63 +18,6 @@
 glm::vec2 lastMousePos{-1.0};
 
 
-glm::vec3 hsv_to_rgb(glm::vec3 in) {
-	float h,s,v;
-	h = in.x; s = in.y; v = in.z;
-
-    h /= 360.0;  // Convert hue to the range [0, 1]
-    int r, g, b;
-
-    if (s == 0) {
-        r = g = b = static_cast<int>(v * 255);
-    } else {
-        h *= 6;  // Convert hue to the range [0, 6]
-        int i = static_cast<int>(h);
-        double f = h - i;
-        int p = static_cast<int>(255 * (v * (1 - s)));
-        int q = static_cast<int>(255 * (v * (1 - s * f)));
-        int t = static_cast<int>(255 * (v * (1 - s * (1 - f))));
-        v = static_cast<int>(255 * v);
-
-        switch (i) {
-            case 0:
-                r = v;
-                g = t;
-                b = p;
-                break;
-            case 1:
-                r = q;
-                g = v;
-                b = p;
-                break;
-            case 2:
-                r = p;
-                g = v;
-                b = t;
-                break;
-            case 3:
-                r = p;
-                g = q;
-                b = v;
-                break;
-            case 4:
-                r = t;
-                g = p;
-                b = v;
-                break;
-            default:
-                r = v;
-                g = p;
-                b = q;
-                break;
-        }
-    }
-
-    return glm::vec3{r, g, b};
-}
-
-
-
 namespace lve {
 
 	LveCamera* activeCamera = nullptr;
@@ -187,17 +130,12 @@ namespace lve {
 		activeCamera = &camera; // Set `activeCamera` to this local camera
 		KeyboardMovementController cameraController{};
 		auto viewerObject = LveGameObject::createGameObject();
-		// viewerObject.transform.position = {0, -1.f, -2.5f};
 		camera.transform.position = {0.f, 1.f, -2.5f};
-		// camera.setViewDirection(camera.transform.position, {0.f, -1.f, 0.f}, {0.f, 1.f, 0.f});
 		camera.transform.rotation = glm::zero<glm::vec3>();
 
 		// glfwSetKeyCallback(lveWindow.getWindow(), handleKey);
 		glfwSetInputMode(lveWindow.window(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 		glfwSetCursorPosCallback(lveWindow.window(), mouseCallback);
-		// gameObjects[1].transform.rotation.x = -glm::atan(1.f/glm::sqrt(2.f));
-		// gameObjects[1].transform.rotation.z = glm::quarter_pi<float>();
-		// gameObjects[1].transform.recalculateBasisDirs();
 
 
 		// Clock
@@ -212,7 +150,7 @@ namespace lve {
 			float dt = std::chrono::duration<float, std::chrono::seconds::period>(newTime - currentTime).count();
 			totalTime += dt;
 			currentTime = newTime;
-			int FPS = (dt <= 0.001f) ? 999 : 1/dt;
+			int FPS = (dt <= 0.001f) ? 999 : 1.0f/dt;
 			std::cout << FPS << "\r";
 
 
@@ -300,12 +238,12 @@ namespace lve {
 
 		// https://www.color-hex.com/color-palette/5361
 		std::vector<glm::vec3> colors{
-				{1.f, .1f, .1f},
-				{.1f, .1f, 1.f},
-				{.1f, 1.f, .1f},
-				{1.f, 1.f, .1f},
-				{.1f, 1.f, 1.f},
-				{1.f, 1.f, 1.f}
+			{1.f, .1f, .1f},
+			{.1f, .1f, 1.f},
+			{.1f, 1.f, .1f},
+			{1.f, 1.f, .1f},
+			{.1f, 1.f, 1.f},
+			{1.f, 1.f, 1.f}
 		};
 
 		for (int i = 0; i < std::min(colors.size(), (size_t)MAX_LIGHTS); i++) {
