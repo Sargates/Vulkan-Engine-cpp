@@ -239,11 +239,11 @@ namespace lve {
 		// https://www.color-hex.com/color-palette/5361
 		std::vector<glm::vec3> colors{
 			{1.f, .1f, .1f},
-			{.1f, .1f, 1.f},
-			{.1f, 1.f, .1f},
+			{1.f, .647f, .1f},
 			{1.f, 1.f, .1f},
-			{.1f, 1.f, 1.f},
-			{1.f, 1.f, 1.f}
+			{.1f, 1.f, .1f},
+			{.1f, .1f, 1.f},
+			{1.f, .1f, 1.f},
 		};
 
 		for (int i = 0; i < std::min(colors.size(), (size_t)MAX_LIGHTS); i++) {
