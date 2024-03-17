@@ -10,7 +10,7 @@
 namespace lve {
 
 	struct PointLightComponent {
-		float lightIntensity = 30.f;
+		glm::vec4 color;
 	};
 
 	class LveGameObject {
@@ -24,9 +24,7 @@ namespace lve {
 			}
 			static LveGameObject makePointLight(float intensity = 10.f, glm::vec3 color = glm::vec3(1.f)) {
 				LveGameObject gameObj = LveGameObject::createGameObject();
-				gameObj.color = color;
 				gameObj.pointLight = std::make_unique<PointLightComponent>();
-				gameObj.pointLight->lightIntensity = intensity;
 				return gameObj;
 			}
 
@@ -40,7 +38,6 @@ namespace lve {
 			id_t getId() const { return id; }
 
 			std::shared_ptr<LveModel> model{};
-			glm::vec3 color{};
 			Transform transform{};
 
 			std::unique_ptr<PointLightComponent> pointLight{};

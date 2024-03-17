@@ -78,7 +78,7 @@ linux:
 	@echo -n "Compiling Object Files: "
 	@$(MAKE) program \
 	CXX="g++" \
-	CXXFLAGS="-I include -L lib/x86_64-linux-gnu -lglfw3 -lvulkan -lGL -std=c++20" \
+	CXXFLAGS="-I include -L lib/x86_64-linux-gnu -lglfw -lvulkan -lGL -std=c++20" \
 	--no-print-directory
 	@echo ""
 

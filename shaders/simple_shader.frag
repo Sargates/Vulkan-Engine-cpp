@@ -1,7 +1,7 @@
 #version 450
 
 layout(location = 0) in vec3 fragColor;
-layout(location = 1) in vec3 fragWorldPos;
+layout(location = 1) in vec3 fragPosWorld;
 layout(location = 2) in vec3 fragNormal;
 
 layout (location = 0) out vec4 outColor;
@@ -15,7 +15,7 @@ layout(set = 0, binding = 0) uniform GlobalUbo {
 	mat4 projectionMatrix;
 	mat4 cameraMatrix;
 	mat4 invCameraMatrix; 
-	vec3 ambientLightColor;
+	vec4 ambientLightColor;
 	int numLights;
 	PointLight pointLights[10];
 } ubo;
@@ -25,37 +25,33 @@ layout(push_constant) uniform Push {
 	mat4 normalMatrix;
 } push;
 
-void main() {
-	// single point light
-	// vec3 directionToLight = ubo.lightPosition - fragWorldPos;
-	// float lightAttenutation = ubo.lightIntensity / dot(directionToLight, directionToLight);
-	// vec3 light = ubo.ambientLightColor 
-	//	 + ubo.lightColor * lightAttenutation * max(dot(normalize(fragNormal), normalize(directionToLight)), 0);
 
-	vec3 diffuseLighting = ubo.ambientLightColor;
-	vec3 specularLighting = vec3(0.0);
-	vec3 surfaceNormal = normalize(fragNormal);
+void main() {
+	vec3 diffuseLight = ubo.ambientLightColor.xyz * ubo.ambientLightColor.w;
+	vec3 specularLighting = vec3(0);
+	vec3 normal = normalize(fragNormal);
 
 	vec3 cameraPosWorld = ubo.invCameraMatrix[3].xyz;
+	vec3 viewDirection = normalize(cameraPosWorld - fragPosWorld);
 
-	for (int i = 0; i < ubo.numLights; i++) {
+	for (int i=0; i<ubo.numLights; i++) {
 		PointLight light = ubo.pointLights[i];
-		vec3 directionToLight = light.position.xyz - fragWorldPos;
-		float attenuation = 1.f / dot(directionToLight, directionToLight);
-		float cosAngIncidence = dot(surfaceNormal, directionToLight);
-		cosAngIncidence = clamp(cosAngIncidence, 0, 1);
+		
+		vec3 lightDirection = normalize(light.position - fragPosWorld);
+		float sqDstToLight = dot(light.position - fragPosWorld, light.position - fragPosWorld);
+		float attenuation = 1.0 / sqDstToLight;
+		float cosAngOfInc = max(dot(normal, normalize(lightDirection)), 0);
+		float intensity = light.color.w * attenuation;
 
-		// diffuse lighting
-		diffuseLighting += light.color.xyz * attenuation * cosAngIncidence;
+		diffuseLight += light.color.xyz * intensity * cosAngOfInc;
 
-		// specular lighting
-		vec3 viewDirection = normalize(cameraPosWorld - fragWorldPos);
-		vec3 halfAngle = normalize(directionToLight + viewDirection);
-		float blinnTerm = dot(surfaceNormal, halfAngle);
-		blinnTerm = clamp(blinnTerm, 0, 1);
-		blinnTerm = cosAngIncidence != 0.0 ? blinnTerm : 0.0;
-		blinnTerm = pow(blinnTerm, 32.0);
-		specularLighting += light.color.xyz * attenuation * blinnTerm;
+		vec3 halfwayAngle = normalize(lightDirection + viewDirection);
+		float binnTerm = max(0, dot(halfwayAngle, normal));
+		binnTerm = pow(binnTerm, 512.0);
+
+		specularLighting += light.color.xyz * binnTerm * intensity;
+
 	}
-	outColor = vec4((specularLighting + diffuseLighting) * fragColor, 1.0);
+
+	outColor = vec4((diffuseLight + specularLighting) * fragColor, 1.0);
 }

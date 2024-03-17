@@ -7,6 +7,7 @@
 #include <array>
 #include <cassert>
 #include <stdexcept>
+#include <map>
 
 namespace lve {
 
@@ -14,7 +15,6 @@ namespace lve {
 		glm::vec3 position{};
 		alignas(16) glm::vec4 color{};
 		float radius;
-		uint32_t index;
 	};
 
 	PointLightSystem::PointLightSystem(LveDevice& device, VkRenderPass renderPass, VkDescriptorSetLayout globalSetLayout) : lveDevice{device} {
@@ -47,13 +47,11 @@ namespace lve {
 
 		PipelineConfigInfo configInfo{};
 		LvePipeline::defaultPipelineConfigInfo(configInfo);
+		LvePipeline::enableAlphaBlending(configInfo);
 		configInfo.renderPass = renderPass;
 		configInfo.pipelineLayout = pipelineLayout;
 		configInfo.bindingDescriptions.clear();
 		configInfo.attributeDescriptions.clear();
-		configInfo.colorBlendAttachment.blendEnable = VK_TRUE;
-		configInfo.colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-		configInfo.colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
 
 		lvePipeline = std::make_unique<LvePipeline>(
 			lveDevice,
@@ -63,6 +61,19 @@ namespace lve {
 	}
 
 	void PointLightSystem::renderLights(FrameInfo& frameInfo) {
+
+		// Sort lights
+		std::map<float, LveGameObject::id_t> sorted;
+		for (auto& kv : frameInfo.gameObjects) {
+			auto& obj = kv.second;
+			if (obj.pointLight == nullptr) continue;
+
+			glm::vec3 displacement = frameInfo.camera.transform.position - obj.transform.position;
+			float disSquared = glm::dot(displacement, displacement);
+			sorted[disSquared] = obj.getId();
+		}
+
+		
 
 		lvePipeline->bind(frameInfo.commandBuffer);
 
@@ -74,13 +85,15 @@ namespace lve {
 			&frameInfo.globalDescriptorSet,
 			0, nullptr);
 
-		for (auto& kv : frameInfo.gameObjects) {
-			auto& obj = kv.second;
-			if (obj.pointLight == nullptr) continue;
+		// for (auto& kv : frameInfo.gameObjects) {
+		// 	auto& obj = kv.second;
+		// 	if (obj.pointLight == nullptr) continue;
+		for (auto it = sorted.rbegin(); it != sorted.rend(); it++) {
+			auto& obj = frameInfo.gameObjects.at(it->second);
 
 			PointLightPushConstants push{};
 			push.position = obj.transform.position;
-			push.color = glm::vec4(obj.color, obj.pointLight->lightIntensity);
+			push.color = obj.pointLight->color;
 			push.radius = .04f;
 
 			vkCmdPushConstants(

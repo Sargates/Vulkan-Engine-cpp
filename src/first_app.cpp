@@ -68,8 +68,8 @@ namespace lve {
 		
 		activeCamera->transform.rotation.x += delta.y; // Delta-Y maps to rotation about X-axis
 		activeCamera->transform.rotation.y += delta.x; // Delta-X maps to rotation about Y-axis
-		float max = glm::half_pi<float>() - 0.01f; // A little smaller than pi/2
-		float min = 0.01f - glm::half_pi<float>(); // A little bigger than -pi/2
+		float max = glm::half_pi<float>() - 0.01f; // A little less than pi/2
+		float min = 0.01f - glm::half_pi<float>(); // A little greater than -pi/2
 		activeCamera->transform.rotation.x = std::clamp(activeCamera->transform.rotation.x, min, max);
 
 		activeCamera->UpdateViewMatrix();
@@ -206,7 +206,7 @@ namespace lve {
 
 			// copy light to ubo
 			ubo.lights[lightIndex].position = obj.transform.position;
-			ubo.lights[lightIndex].color = glm::vec4(obj.color, obj.pointLight->lightIntensity);
+			ubo.lights[lightIndex].color = obj.pointLight->color;
 			if (++lightIndex == MAX_LIGHTS) break;
 		}
 		ubo.numLights = lightIndex;
@@ -232,26 +232,30 @@ namespace lve {
 		lveModel = createGrid(lveDevice, glm::vec3{0.f}, 0.5, glm::ivec2{16});
 		auto floor = LveGameObject::createGameObject();
 		floor.model = lveModel;
-		floor.transform.position = {0.f, -.5f, .5f};
+		floor.transform.position = {0.f, -.5f, 0.f};
 		floor.transform.scale = {3.f, 1.f, 3.f};
 		gameObjects.emplace(floor.getId(), std::move(floor));
 
 		// https://www.color-hex.com/color-palette/5361
-		std::vector<glm::vec3> colors{
+		std::vector<glm::vec3> colors {
 			{1.f, .1f, .1f},
-			{1.f, .647f, .1f},
+			{1.f, .5f, .1f},
 			{1.f, 1.f, .1f},
 			{.1f, 1.f, .1f},
 			{.1f, .1f, 1.f},
 			{1.f, .1f, 1.f},
 		};
+		// std::vector<glm::vec3> colors {
+		// 	{.1f, 1.f, .1f},
+		// 	{1.f, .1f, 1.f},
+		// };
 
 		for (int i = 0; i < std::min(colors.size(), (size_t)MAX_LIGHTS); i++) {
-			auto pointLight = LveGameObject::makePointLight(0.2f);
-			pointLight.color = colors[i];
-			auto rotateLight = glm::rotate(glm::mat4(1.f), (i * glm::two_pi<float>()) / colors.size(), {0.f, -1.f, 0.f});
-			pointLight.transform.position = glm::vec3(rotateLight * glm::vec4{1.f});
-			gameObjects.emplace(pointLight.getId(), std::move(pointLight));
+			auto pointLightObj = LveGameObject::makePointLight(0.2f);
+			pointLightObj.pointLight->color = glm::vec4(colors[i], 1.f);
+			auto rotateLight = glm::rotate(glm::mat4(1.f), (i * glm::two_pi<float>()) / colors.size(), {0.f, 1.f, 0.f});
+			pointLightObj.transform.position = glm::vec3(rotateLight * glm::vec4{0.f, 1.f, 1.f, 1.f});
+			gameObjects.emplace(pointLightObj.getId(), std::move(pointLightObj));
 		}
 
 		// lveModel = LveModel::createModelFromFile(lveDevice, "./resources/icosphere.obj");

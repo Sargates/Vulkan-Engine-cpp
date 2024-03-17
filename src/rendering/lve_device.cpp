@@ -80,6 +80,10 @@ namespace lve {
 		appInfo.pEngineName = "No Engine";
 		appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
 		appInfo.apiVersion = VK_API_VERSION_1_2;
+		// if (vkEnumerateInstanceVersion(&appInfo.apiVersion) != VK_SUCCESS) {
+		// 	throw std::runtime_error("Failed to get API version");
+		// }
+		std::cout << "Vulkan API Version: " + std::to_string((appInfo.apiVersion>>22)%1024)+"."+std::to_string((appInfo.apiVersion>>12)%1024)+"."+std::to_string((appInfo.apiVersion)%4096) << std::endl;
 
 		VkInstanceCreateInfo createInfo = {};
 		createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -88,6 +92,8 @@ namespace lve {
 		auto extensions = getRequiredExtensions();
 		createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
 		createInfo.ppEnabledExtensionNames = extensions.data();
+
+		
 
 		VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo;
 		if (enableValidationLayers) {
@@ -282,20 +288,20 @@ namespace lve {
 
 		//* Commented out code to list vulkan extensions at beginning of runtime
 		// std::cout << "available extensions:" << std::endl;
-		// std::unordered_set<std::string> available;
-		// for (const auto &extension : extensions) {
-		// 	std::cout << "\t" << extension.extensionName << std::endl;
-		// 	available.insert(extension.extensionName);
-		// }
+		std::unordered_set<std::string> available;
+		for (const auto &extension : extensions) {
+			// std::cout << "\t" << extension.extensionName << std::endl;
+			available.insert(extension.extensionName);
+		}
 
 		// std::cout << "required extensions:" << std::endl;
-		// auto requiredExtensions = getRequiredExtensions();
-		// for (const auto &required : requiredExtensions) {
-		// 	std::cout << "\t" << required << std::endl;
-		// 	if (available.find(required) == available.end()) {
-		// 		throw std::runtime_error("Missing required glfw extension");
-		// 	}
-		// }
+		auto requiredExtensions = getRequiredExtensions();
+		for (const auto &required : requiredExtensions) {
+			// std::cout << "\t" << required << std::endl;
+			if (available.find(required) == available.end()) {
+				throw std::runtime_error("Missing required glfw extension");
+			}
+		}
 	}
 
 	bool LveDevice::checkDeviceExtensionSupport(VkPhysicalDevice device) {

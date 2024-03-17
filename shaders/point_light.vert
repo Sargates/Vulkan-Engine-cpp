@@ -20,7 +20,7 @@ layout(set = 0, binding = 0) uniform GlobalUbo {
 	mat4 projectionMatrix;
 	mat4 cameraMatrix;
 	mat4 invCameraMatrix; 
-	vec3 ambientLightColor;
+	vec4 ambientLightColor;
 	int numLights;
 	PointLight pointLights[10];
 } ubo;

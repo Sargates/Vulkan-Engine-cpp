@@ -11,9 +11,9 @@ struct PointLight {
 
 layout(set = 0, binding = 0) uniform GlobalUbo {
 	mat4 projectionMatrix;
-	mat4 viewMatrix;
-	mat4 invViewMatrix; 
-	vec3 ambientLightColor;
+	mat4 cameraMatrix;
+	mat4 invCameraMatrix; 
+	vec4 ambientLightColor;
 	int numLights;
 	PointLight pointLights[10];
 } ubo;
@@ -32,5 +32,5 @@ void main() {
 	if (alpha <= 0.0) { discard; } // Discard any pixels with distance >= 1, this will only draw pixels in a circle
 
 	// Set `outColor` based on alpha value, this will cause the circle to fade toward the edges
-	outColor = vec4(2.0 * push.color.xyz * push.color.w, alpha);
+	outColor = vec4(push.color.xyz * push.color.w, alpha);
 }

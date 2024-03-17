@@ -187,13 +187,27 @@ namespace lve {
 					};
 				}
 
-				if (uniqueVertices.count(vertex) == 0) {
+				if (!uniqueVertices.contains(vertex)) {
 					uniqueVertices[vertex] = static_cast<uint32_t>(vertices.size());
 					vertices.push_back(vertex);
 				}
 				indices.push_back(uniqueVertices[vertex]);
 			}
 		}
+
+		// for (int index=0; index < indices.size()-3; index += 3) {
+		// 	Vertex& vert1 = vertices[indices[index    ]];
+		// 	Vertex& vert2 = vertices[indices[index + 1]];
+		// 	Vertex& vert3 = vertices[indices[index + 2]];
+		// 	float max = 0.2f;
+		// 	if (glm::distance(vert1.position, vert2.position) >= max || glm::distance(vert2.position, vert3.position) >= max || glm::distance(vert3.position, vert1.position) >= max) {
+		// 		std::cout<< indices[index] << ", " <<
+		// 					glm::to_string<glm::vec3>(vert1.position) << ", " <<
+		// 					glm::to_string<glm::vec3>(vert2.position) << ", " <<
+		// 					glm::to_string<glm::vec3>(vert3.position) << std::endl;
+		// 	}
+
+		// }
 	}
 
 

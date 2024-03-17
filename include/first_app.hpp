@@ -27,7 +27,7 @@ namespace lve {
 		glm::mat4 projectionMatrix{1.f};
 		glm::mat4 cameraMatrix{1.f};
 		glm::mat4 invCameraMatrix{1.f};
-		glm::vec3 ambientLightColor{0.02f};
+		glm::vec4 ambientLightColor{1.f, 1.f, 1.f, 0.02f};
 		
 		int numLights;
 		PointLight lights[MAX_LIGHTS];

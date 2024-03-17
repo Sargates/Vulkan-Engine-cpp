@@ -11,10 +11,13 @@ Pull, `cd` into the repo, and call `make`. Default directive is to build for Win
 for linux, additionally include the `run` directive to run the program automatically after compilation.
 
 ## Dependencies
-> Tested on MinGW-w64 version 8.0.0 (GCC 10.3) and GCC 13.2
+> :information_source: The include GLFW for Linux may not work correctly, install `libglfw3` with your distribution's package manager if it doesn't. Also you probably need to install the validation layers on linux.
+
+Tested on MinGW-w64 version 8.0.0 (GCC 10.3) and GCC 13.2
+
 
 Either GCC or a modern MinGW C++ compiler. Every required library is included. Your computer **must** support the Vulkan API. \
-To compile for Windows, as stated above, a MinGW compiler is required. **The included GLFW library is built for MinGW not MSVC** but you can always modify the Makefile and link the program to your local GLFW library manually. \
+To compile for Windows, as stated above, a MinGW compiler is required. **The included GLFW dll library is built for MinGW not MSVC** but you can always modify the Makefile and link the program to your local GLFW library manually. \
 
 Modify the Makefile as necessary. At the very least, the top-level directives are marginally readable.
 

@@ -2,8 +2,10 @@
 *.exe
 .vscode
 obj
+ignore
 
 main
 program
+devnotes.md
 notes.md
 !glslc.exe

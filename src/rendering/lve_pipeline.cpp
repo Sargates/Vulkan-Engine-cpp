@@ -184,6 +184,17 @@ namespace lve {
 		configInfo.bindingDescriptions = LveModel::Vertex::getBindingDescriptions();
 		configInfo.attributeDescriptions = LveModel::Vertex::getAttributeDescriptions();
 	}
+	void LvePipeline::enableAlphaBlending(PipelineConfigInfo& configInfo) {
+		configInfo.colorBlendAttachment.blendEnable = VK_TRUE;
+		configInfo.colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+		configInfo.colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+		configInfo.colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+
+		configInfo.colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+		configInfo.colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+		configInfo.colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
+	}
+
 
 	void LvePipeline::bind(VkCommandBuffer commandBuffer) {
 		vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
