@@ -1,6 +1,6 @@
 #pragma once
 
-#include "rendering/lve_model.hpp"
+#include "lve_model.hpp"
 #include "transform.hpp"
 
 

@@ -3,7 +3,7 @@
 #include "rendering/lve_window.hpp"
 #include "rendering/lve_device.hpp"
 #include "rendering/lve_swap_chain.hpp"
-#include "rendering/lve_model.hpp"
+#include "lve_model.hpp"
 
 #include <memory>
 #include <vector>

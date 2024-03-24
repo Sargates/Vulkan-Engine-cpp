@@ -3,12 +3,12 @@
 #include "rendering/lve_window.hpp"
 #include "rendering/lve_pipeline.hpp"
 #include "rendering/lve_device.hpp"
-#include "rendering/lve_model.hpp"
 #include "rendering/lve_renderer.hpp"
-#include "rendering/lve_game_object.hpp"
 #include "rendering/lve_frame_info.hpp"
-#include "rendering/lve_camera.hpp"
 #include "rendering/lve_descriptors.hpp"
+#include "lve_model.hpp"
+#include "lve_game_object.hpp"
+#include "lve_camera.hpp"
 
 #include <memory>
 #include <vector>

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "rendering/lve_game_object.hpp"
+#include "lve_game_object.hpp"
 #include "rendering/lve_window.hpp"
 
 namespace lve {

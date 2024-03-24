@@ -1,6 +1,6 @@
 #include "first_app.hpp"
 
-#include "rendering/lve_camera.hpp"
+#include "lve_camera.hpp"
 #include "rendering/systems/simple_render_system.hpp"
 #include "rendering/systems/point_light_system.hpp"
 #include "keyboard_movement_controller.hpp"
